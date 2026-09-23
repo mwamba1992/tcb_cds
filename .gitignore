@@ -1,0 +1,44 @@
+# compiled output
+dist
+tmp
+out-tsc
+
+# dependencies
+node_modules
+
+# IDEs and editors
+/.idea
+.vscode/*
+!.vscode/settings.json
+!.vscode/extensions.json
+
+# misc
+/coverage
+npm-debug.log
+.DS_Store
+Thumbs.db
+
+.nx/cache
+.nx/workspace-data
+.nx/migrate-runs
+.claude/worktrees
+.claude/settings.local.json
+
+# local env — never commit real credentials
+.env
+.env.local
+
+# key material — BoT API keys and RSA keys live in Vault/HSM, never in the repo
+*.pem
+*.key
+*.p12
+secrets/
+
+# prisma generated client
+apps/*/src/generated/
+
+# Word lock files, created while a .docx is open
+~$*
+
+# service logs
+.tmp/

@@ -1,0 +1,33 @@
+// GovSec — Notification service datastore.
+//
+// SMS, email and push notifications, driven by events and by direct internal calls (TAD §4.2).
+//
+// Owns the PostgreSQL schema "notification" exclusively. No other service reads
+// or writes it; other services learn about its state through events (TAD §9.2).
+
+generator client {
+  provider     = "prisma-client"
+  output       = "../src/generated/prisma"
+  moduleFormat = "cjs"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+/// One attempted delivery. The body is not stored for sensitive messages (one-time
+/// codes, PIN resets); the destination is stored masked.
+model DeliveryLog {
+  id               String   @id @default(uuid()) @db.Uuid
+  channel          String   @db.VarChar(10)
+  destinationMask  String   @map("destination_mask") @db.VarChar(64)
+  templateKey      String   @map("template_key") @db.VarChar(100)
+  category         String   @db.VarChar(20)
+  status           String   @db.VarChar(20)
+  providerRef      String?  @map("provider_ref") @db.VarChar(100)
+  error            String?
+  createdAt        DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
+
+  @@index([createdAt])
+  @@map("delivery_log")
+}

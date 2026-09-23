@@ -1,0 +1,8 @@
+{
+  "name": "bot-client",
+  "$schema": "../../node_modules/nx/schemas/project-schema.json",
+  "sourceRoot": "libs/bot-client/src",
+  "projectType": "library",
+  "tags": ["type:lib", "domain:bot-client"],
+  "targets": {}
+}

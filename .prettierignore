@@ -1,0 +1,6 @@
+/dist
+/coverage
+/.nx
+**/src/generated
+package-lock.json
+**/migrations/**/*.sql

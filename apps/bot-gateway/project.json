@@ -1,0 +1,65 @@
+{
+  "name": "bot-gateway",
+  "$schema": "../../node_modules/nx/schemas/project-schema.json",
+  "sourceRoot": "apps/bot-gateway/src",
+  "projectType": "application",
+  "targets": {
+    "build": {
+      "executor": "nx:run-commands",
+      "options": {
+        "command": "webpack-cli build",
+        "env": {
+          "NODE_ENV": "production"
+        },
+        "cwd": "apps/bot-gateway"
+      },
+      "configurations": {
+        "development": {
+          "env": {
+            "NODE_ENV": "development"
+          }
+        }
+      }
+    },
+    "serve": {
+      "continuous": true,
+      "executor": "@nx/js:node",
+      "defaultConfiguration": "development",
+      "dependsOn": ["build"],
+      "options": {
+        "buildTarget": "bot-gateway:build",
+        "runBuildTargetDependencies": false
+      },
+      "configurations": {
+        "development": {
+          "buildTarget": "bot-gateway:build:development"
+        },
+        "production": {
+          "buildTarget": "bot-gateway:build:production"
+        }
+      }
+    },
+    "typecheck": {
+      "executor": "nx:run-commands",
+      "options": {
+        "command": "tsc -p tsconfig.app.json --noEmit",
+        "cwd": "apps/bot-gateway"
+      }
+    },
+    "prisma-generate": {
+      "executor": "nx:run-commands",
+      "options": {
+        "command": "prisma generate --config prisma.config.ts",
+        "cwd": "apps/bot-gateway"
+      }
+    },
+    "prisma-migrate": {
+      "executor": "nx:run-commands",
+      "options": {
+        "command": "prisma migrate deploy --config prisma.config.ts",
+        "cwd": "apps/bot-gateway"
+      }
+    }
+  },
+  "tags": ["type:app", "domain:bot-gateway"]
+}

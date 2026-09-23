@@ -1,0 +1,16 @@
+{
+  "extends": "../../tsconfig.base.json",
+  "compilerOptions": {
+    "allowJs": false,
+    "allowSyntheticDefaultImports": true,
+    "strict": true,
+    "jsx": "preserve",
+    "jsxImportSource": "vue",
+    "moduleResolution": "bundler",
+    "resolveJsonModule": true,
+    "lib": ["es2023", "DOM", "DOM.Iterable"]
+  },
+  "files": [],
+  "include": [],
+  "references": [{ "path": "./tsconfig.app.json" }, { "path": "./tsconfig.spec.json" }]
+}

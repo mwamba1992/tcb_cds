@@ -1,0 +1,66 @@
+/*
+ * GovSec portal design tokens, taken from the Claude Design handover
+ * ("Tanzania Commercial Bank Portal Design", 23 Sep 2026).
+ *
+ * The investor portal and the back-office share these exactly: one bank, one brand.
+ * Change a value here, never inline in a component.
+ */
+:root {
+  /* brand — TCB navy, with the three logo colours as accents only */
+  --navy: #1d234f;
+  --navy-hover: #12173a;
+  --navy-raised: #2e3670; /* active nav item, sidebar dividers */
+  --brand-yellow: #fdcd07;
+  --brand-green: #34b98d;
+  --brand-blue: #1ba6df;
+
+  /* sidebar text */
+  --on-navy: #ffffff;
+  --on-navy-muted: #c6c9df;
+  --on-navy-faint: #a9adcb;
+
+  /* neutrals */
+  --ink: #13202e;
+  --muted: #5b6875;
+  --border: #e3e6ea;
+  --divider: #eef0f2;
+  --control-border: #c9cfd6;
+  --surface: #ffffff;
+  --page: #f5f6fa;
+  --row-hover: #f8f9fc;
+  --selected: #f1f2f8;
+  --disabled: #a3a7c2;
+
+  /* status tones: [background, foreground] */
+  --green-bg: #e6f2ec;
+  --green-fg: #1f6b45;
+  --amber-bg: #fbf1dc;
+  --amber-fg: #8a5a00;
+  --blue-bg: #e9eaf3;
+  --blue-fg: #1d234f;
+  --red-bg: #fbeaea;
+  --red-fg: #a2231b;
+  --red-border: #e8c4c1;
+  --grey-bg: #eef0f2;
+  --grey-fg: #3a4652;
+
+  /* type */
+  --font-sans: 'IBM Plex Sans', system-ui, sans-serif;
+  --font-mono: 'IBM Plex Mono', ui-monospace, monospace;
+
+  /* shape */
+  --radius-card: 12px;
+  --radius-control: 6px;
+  --radius-chip: 4px;
+  --shadow-card: 0 1px 2px rgba(29, 35, 79, 0.04), 0 4px 16px -8px rgba(29, 35, 79, 0.08);
+
+  /* layout */
+  --sidebar-width: 232px;
+  /*
+   * The prototype capped content at 1280px, which leaves an empty band on the right of
+   * any screen wider than ~1500px while the header runs full width. Content now fills
+   * the screen up to 1920px, so a full-HD monitor is used edge to edge and only
+   * ultra-wide screens see a margin.
+   */
+  --content-max: 1920px;
+}

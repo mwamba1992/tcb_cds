@@ -1,0 +1,82 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+
+    # Real Postgres and RabbitMQ rather than mocks: the things most likely to break only
+    # exist against a real broker and a real database — search_path resolution,
+    # SKIP LOCKED, quorum queue arguments.
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_USER: govsec
+          POSTGRES_PASSWORD: govsec
+          POSTGRES_DB: govsec_test
+        ports: ['5432:5432']
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+
+      rabbitmq:
+        image: rabbitmq:4-management
+        ports: ['5672:5672', '15672:15672']
+        options: >-
+          --health-cmd "rabbitmq-diagnostics -q ping"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 10
+
+    env:
+      IDENTITY_DATABASE_URL: postgresql://govsec:govsec@localhost:5432/govsec_test?schema=identity
+      INVESTOR_DATABASE_URL: postgresql://govsec:govsec@localhost:5432/govsec_test?schema=investor
+      AUCTION_DATABASE_URL: postgresql://govsec:govsec@localhost:5432/govsec_test?schema=auction
+      BOT_GATEWAY_DATABASE_URL: postgresql://govsec:govsec@localhost:5432/govsec_test?schema=bot_gateway
+      CBS_GATEWAY_DATABASE_URL: postgresql://govsec:govsec@localhost:5432/govsec_test?schema=cbs_gateway
+      SETTLEMENT_DATABASE_URL: postgresql://govsec:govsec@localhost:5432/govsec_test?schema=settlement
+      NOTIFICATION_DATABASE_URL: postgresql://govsec:govsec@localhost:5432/govsec_test?schema=notification
+      RABBITMQ_URL: amqp://guest:guest@localhost:5672
+      INTERNAL_SERVICE_SECRET: ci-internal-secret
+      JWT_ACCESS_SECRET: ci-access-secret
+      JWT_STEP_UP_SECRET: ci-step-up-secret
+      NODE_ENV: test
+      # Every service that owns a schema — read by both the generate and migrate steps.
+      SERVICES: identity investor auction bot-gateway cbs-gateway settlement notification
+
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      - run: npm ci
+
+      - name: Create service schemas
+        run: PGPASSWORD=govsec psql -h localhost -U govsec -d govsec_test -f scripts/init-schemas.sql
+
+      - name: Generate Prisma clients
+        run: for s in $SERVICES; do npx nx run $s:prisma-generate; done
+
+      - name: Apply migrations
+        run: for s in $SERVICES; do npx nx run $s:prisma-migrate; done
+
+      - run: npx nx run-many -t lint --all
+      - run: npx nx run-many -t test --all
+      - run: npx nx run-many -t typecheck --all
+      - run: npx nx run-many -t build --all

@@ -1,0 +1,61 @@
+{
+  "compileOnSave": false,
+  "compilerOptions": {
+    "rootDir": ".",
+    "sourceMap": true,
+    "declaration": false,
+    "moduleResolution": "bundler",
+    "emitDecoratorMetadata": true,
+    "experimentalDecorators": true,
+    "importHelpers": true,
+    "target": "es2022",
+    "module": "esnext",
+    "lib": [
+      "es2023"
+    ],
+    "skipLibCheck": true,
+    "skipDefaultLibCheck": true,
+    "strict": true,
+    "noImplicitOverride": true,
+    "noFallthroughCasesInSwitch": true,
+    "noUncheckedIndexedAccess": true,
+    "exactOptionalPropertyTypes": false,
+    "forceConsistentCasingInFileNames": true,
+    "paths": {
+      "@govsec/money": [
+        "./libs/money/src/index.ts"
+      ],
+      "@govsec/events": [
+        "./libs/events/src/index.ts"
+      ],
+      "@govsec/auth": [
+        "./libs/auth/src/index.ts"
+      ],
+      "@govsec/outbox": [
+        "./libs/outbox/src/index.ts"
+      ],
+      "@govsec/notify": [
+        "./libs/notify/src/index.ts"
+      ],
+      "@govsec/settings": [
+        "./libs/settings/src/index.ts"
+      ],
+      "@govsec/reference": [
+        "./libs/reference/src/index.ts"
+      ],
+      "@govsec/pagination": [
+        "./libs/pagination/src/index.ts"
+      ],
+      "@govsec/bot-client": [
+        "./libs/bot-client/src/index.ts"
+      ],
+      "@govsec/auth/roles": [
+        "./libs/auth/src/lib/roles.ts"
+      ]
+    }
+  },
+  "exclude": [
+    "node_modules",
+    "tmp"
+  ]
+}

@@ -1,0 +1,65 @@
+{
+  "name": "settlement",
+  "$schema": "../../node_modules/nx/schemas/project-schema.json",
+  "sourceRoot": "apps/settlement/src",
+  "projectType": "application",
+  "targets": {
+    "build": {
+      "executor": "nx:run-commands",
+      "options": {
+        "command": "webpack-cli build",
+        "env": {
+          "NODE_ENV": "production"
+        },
+        "cwd": "apps/settlement"
+      },
+      "configurations": {
+        "development": {
+          "env": {
+            "NODE_ENV": "development"
+          }
+        }
+      }
+    },
+    "serve": {
+      "continuous": true,
+      "executor": "@nx/js:node",
+      "defaultConfiguration": "development",
+      "dependsOn": ["build"],
+      "options": {
+        "buildTarget": "settlement:build",
+        "runBuildTargetDependencies": false
+      },
+      "configurations": {
+        "development": {
+          "buildTarget": "settlement:build:development"
+        },
+        "production": {
+          "buildTarget": "settlement:build:production"
+        }
+      }
+    },
+    "typecheck": {
+      "executor": "nx:run-commands",
+      "options": {
+        "command": "tsc -p tsconfig.app.json --noEmit",
+        "cwd": "apps/settlement"
+      }
+    },
+    "prisma-generate": {
+      "executor": "nx:run-commands",
+      "options": {
+        "command": "prisma generate --config prisma.config.ts",
+        "cwd": "apps/settlement"
+      }
+    },
+    "prisma-migrate": {
+      "executor": "nx:run-commands",
+      "options": {
+        "command": "prisma migrate deploy --config prisma.config.ts",
+        "cwd": "apps/settlement"
+      }
+    }
+  },
+  "tags": ["type:app", "domain:settlement"]
+}

@@ -1,0 +1,47 @@
+# Local dependencies for GovSec development.
+#
+# Only needed if you do not already run Postgres and RabbitMQ locally (Homebrew works
+# too — the ports and defaults below match `brew services`).
+#
+#   docker compose up -d
+#
+# RabbitMQ management UI: http://localhost:15672 (guest/guest)
+
+services:
+  postgres:
+    image: postgres:16
+    container_name: govsec-postgres
+    environment:
+      POSTGRES_USER: govsec
+      POSTGRES_PASSWORD: govsec
+      POSTGRES_DB: govsec_dev
+    ports:
+      - '5432:5432'
+    volumes:
+      - govsec-pgdata:/var/lib/postgresql/data
+      # One schema per service (TAD §9.2).
+      - ./scripts/init-schemas.sql:/docker-entrypoint-initdb.d/10-schemas.sql:ro
+    healthcheck:
+      test: ['CMD-SHELL', 'pg_isready -U govsec -d govsec_dev']
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  rabbitmq:
+    # 4.x: classic mirrored queues are gone, quorum queues are the durable option.
+    image: rabbitmq:4-management
+    container_name: govsec-rabbitmq
+    ports:
+      - '5672:5672'
+      - '15672:15672'
+    volumes:
+      - govsec-rabbitdata:/var/lib/rabbitmq
+    healthcheck:
+      test: ['CMD', 'rabbitmq-diagnostics', '-q', 'ping']
+      interval: 10s
+      timeout: 5s
+      retries: 10
+
+volumes:
+  govsec-pgdata:
+  govsec-rabbitdata:

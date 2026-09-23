@@ -1,0 +1,65 @@
+{
+  "name": "identity",
+  "$schema": "../../node_modules/nx/schemas/project-schema.json",
+  "sourceRoot": "apps/identity/src",
+  "projectType": "application",
+  "targets": {
+    "build": {
+      "executor": "nx:run-commands",
+      "options": {
+        "command": "webpack-cli build",
+        "env": {
+          "NODE_ENV": "production"
+        },
+        "cwd": "apps/identity"
+      },
+      "configurations": {
+        "development": {
+          "env": {
+            "NODE_ENV": "development"
+          }
+        }
+      }
+    },
+    "serve": {
+      "continuous": true,
+      "executor": "@nx/js:node",
+      "defaultConfiguration": "development",
+      "dependsOn": ["build"],
+      "options": {
+        "buildTarget": "identity:build",
+        "runBuildTargetDependencies": false
+      },
+      "configurations": {
+        "development": {
+          "buildTarget": "identity:build:development"
+        },
+        "production": {
+          "buildTarget": "identity:build:production"
+        }
+      }
+    },
+    "typecheck": {
+      "executor": "nx:run-commands",
+      "options": {
+        "command": "tsc -p tsconfig.app.json --noEmit",
+        "cwd": "apps/identity"
+      }
+    },
+    "prisma-generate": {
+      "executor": "nx:run-commands",
+      "options": {
+        "command": "prisma generate --config prisma.config.ts",
+        "cwd": "apps/identity"
+      }
+    },
+    "prisma-migrate": {
+      "executor": "nx:run-commands",
+      "options": {
+        "command": "prisma migrate deploy --config prisma.config.ts",
+        "cwd": "apps/identity"
+      }
+    }
+  },
+  "tags": ["type:app", "domain:identity"]
+}
