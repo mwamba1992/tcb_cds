@@ -27,7 +27,16 @@ export class KycService {
 
   async list(status?: string) {
     const cases = await this.prisma.kycCase.findMany({
-      where: status ? { status } : { status: { in: OPEN_STATES } },
+      // By default the open queue plus the last three days' decisions, so an officer
+      // can see what happened to a case they worked yesterday.
+      where: status
+        ? { status }
+        : {
+            OR: [
+              { status: { in: OPEN_STATES } },
+              { closedAt: { gte: new Date(Date.now() - 3 * 86_400_000) } },
+            ],
+          },
       orderBy: { openedAt: 'asc' },
       take: 200,
       include: { investor: { include: { individual: true, verifications: { orderBy: { checkedAt: 'desc' } } } } },
@@ -36,7 +45,15 @@ export class KycService {
   }
 
   async get(reference: string) {
-    return caseView(await this.find(reference));
+    const kase = await this.find(reference);
+    const history = await this.prisma.staffAction.findMany({
+      where: { subjectType: 'kyc_case', subjectRef: kase.reference },
+      orderBy: { at: 'asc' },
+    });
+    return {
+      ...caseView(kase),
+      history: history.map((h) => ({ action: h.action, by: h.actorName, role: h.actorRole, note: h.note, at: h.at })),
+    };
   }
 
   async act(reference: string, action: KycAction, note: string | undefined, actor: AuthenticatedUser) {
@@ -51,16 +68,21 @@ export class KycService {
       const status = action === 'approve' ? 'awaiting_checker' : action === 'reject' ? 'rejected' : 'info_requested';
       // Conditional on the status read above, so two officers acting at once cannot
       // both succeed.
-      const updated = await this.prisma.kycCase.updateMany({
-        where: { id: kase.id, status: kase.status },
-        data: {
-          status,
-          makerId: actor.accountId,
-          makerAction: action,
-          makerNote: note ?? null,
-          makerAt: now,
-          ...(action === 'reject' ? { closedAt: now } : {}),
-        },
+      const updated = await this.prisma.$transaction(async (tx) => {
+        const changed = await tx.kycCase.updateMany({
+          where: { id: kase.id, status: kase.status },
+          data: {
+            status,
+            makerId: actor.accountId,
+            makerName: actor.name ?? null,
+            makerAction: action,
+            makerNote: note ?? null,
+            makerAt: now,
+            ...(action === 'reject' ? { closedAt: now } : {}),
+          },
+        });
+        if (changed.count === 1) await tx.staffAction.create({ data: audit(actor, `kyc.${action}`, kase, note, now) });
+        return changed;
       });
       if (updated.count !== 1) throw conflict();
 
@@ -89,15 +111,20 @@ export class KycService {
         throw new ForbiddenException({ code: 'maker_checker', message: 'A different user must approve a decision you made' });
       }
       const approve = action === 'final-approve';
-      const updated = await this.prisma.kycCase.updateMany({
-        where: { id: kase.id, status: 'awaiting_checker' },
-        data: {
-          status: approve ? 'approved' : 'returned',
-          checkerId: actor.accountId,
-          checkerNote: note ?? null,
-          checkerAt: now,
-          ...(approve ? { closedAt: now } : {}),
-        },
+      const updated = await this.prisma.$transaction(async (tx) => {
+        const changed = await tx.kycCase.updateMany({
+          where: { id: kase.id, status: 'awaiting_checker' },
+          data: {
+            status: approve ? 'approved' : 'returned',
+            checkerId: actor.accountId,
+            checkerName: actor.name ?? null,
+            checkerNote: note ?? null,
+            checkerAt: now,
+            ...(approve ? { closedAt: now } : {}),
+          },
+        });
+        if (changed.count === 1) await tx.staffAction.create({ data: audit(actor, `kyc.${action}`, kase, note, now) });
+        return changed;
       });
       if (updated.count !== 1) throw conflict();
       if (approve) await this.decisions.approve(kase.investorId, 'staff');
@@ -119,6 +146,27 @@ function demand(actor: AuthenticatedUser, permission: string): void {
   if (!(actor.permissions as readonly string[]).includes(permission)) {
     throw new ForbiddenException({ code: 'forbidden', message: `Requires ${permission}` });
   }
+}
+
+export function audit(
+  actor: AuthenticatedUser,
+  action: string,
+  subject: { reference: string; investorId: string },
+  note: string | undefined,
+  at: Date,
+  subjectType: 'kyc_case' | 'cds_request' = 'kyc_case',
+) {
+  return {
+    actorId: actor.accountId,
+    actorName: actor.name ?? null,
+    actorRole: actor.role,
+    action,
+    subjectType,
+    subjectRef: subject.reference,
+    investorId: subject.investorId,
+    note: note ?? null,
+    at,
+  };
 }
 
 function conflict() {
@@ -170,7 +218,11 @@ function caseView(kase: CaseRow) {
     newToBank: cbsDetails.newToBank ?? null,
     fields,
     screening,
-    maker: kase.makerId ? { id: kase.makerId, action: kase.makerAction, note: kase.makerNote, at: kase.makerAt } : null,
-    checker: kase.checkerId ? { id: kase.checkerId, note: kase.checkerNote, at: kase.checkerAt } : null,
+    maker: kase.makerId
+      ? { id: kase.makerId, name: kase.makerName, action: kase.makerAction, note: kase.makerNote, at: kase.makerAt }
+      : null,
+    checker: kase.checkerId
+      ? { id: kase.checkerId, name: kase.checkerName, note: kase.checkerNote, at: kase.checkerAt }
+      : null,
   };
 }

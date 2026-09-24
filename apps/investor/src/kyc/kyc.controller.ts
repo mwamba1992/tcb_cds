@@ -66,6 +66,6 @@ export class CdsController {
   @RequirePermissions(PERMISSIONS.cdsOpen)
   @ApiOperation({ summary: 'Record the CDS account opened for the investor' })
   complete(@Param('reference') reference: string, @Body() dto: CompleteCdsDto, @CurrentUser() user: AuthenticatedUser) {
-    return this.cds.complete(reference, dto.cdsAccount, user.accountId);
+    return this.cds.complete(reference, dto.cdsAccount, user);
   }
 }

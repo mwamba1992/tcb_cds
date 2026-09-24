@@ -153,10 +153,12 @@ model KycCase {
   /// new | info_requested | awaiting_checker | returned | approved | rejected
   status      String    @default("new") @db.VarChar(20)
   makerId     String?   @map("maker_id") @db.Uuid
+  makerName   String?   @map("maker_name") @db.VarChar(120)
   makerAction String?   @map("maker_action") @db.VarChar(20)
   makerNote   String?   @map("maker_note") @db.VarChar(500)
   makerAt     DateTime? @map("maker_at") @db.Timestamptz(6)
   checkerId   String?   @map("checker_id") @db.Uuid
+  checkerName String?   @map("checker_name") @db.VarChar(120)
   checkerNote String?   @map("checker_note") @db.VarChar(500)
   checkerAt   DateTime? @map("checker_at") @db.Timestamptz(6)
   slaDueAt    DateTime  @map("sla_due_at") @db.Timestamptz(6)
@@ -172,18 +174,41 @@ model KycCase {
 /// A back-office task: open the investor's account at the CDS and record its number.
 /// BoT publishes no CDS API (TAD Appendix B), so this is done by hand until it does.
 model CdsRequest {
-  id          String    @id @default(uuid()) @db.Uuid
-  reference   String    @unique @db.VarChar(12)
-  investorId  String    @unique @map("investor_id") @db.Uuid
+  id              String    @id @default(uuid()) @db.Uuid
+  reference       String    @unique @db.VarChar(12)
+  investorId      String    @unique @map("investor_id") @db.Uuid
   /// pending | completed
-  status      String    @default("pending") @db.VarChar(10)
-  cdsAccount  String?   @map("cds_account") @db.VarChar(20)
-  completedBy String?   @map("completed_by") @db.Uuid
-  completedAt DateTime? @map("completed_at") @db.Timestamptz(6)
-  createdAt   DateTime  @default(now()) @map("created_at") @db.Timestamptz(6)
+  status          String    @default("pending") @db.VarChar(10)
+  cdsAccount      String?   @map("cds_account") @db.VarChar(20)
+  completedBy     String?   @map("completed_by") @db.Uuid
+  completedByName String?   @map("completed_by_name") @db.VarChar(120)
+  completedAt     DateTime? @map("completed_at") @db.Timestamptz(6)
+  createdAt       DateTime  @default(now()) @map("created_at") @db.Timestamptz(6)
 
   investor Investor @relation(fields: [investorId], references: [id])
 
   @@index([status, createdAt])
   @@map("cds_requests")
+}
+
+/// Every back-office action, append-only: who did what to which record, and why.
+/// Names are copied at the time, so the trail still reads correctly after someone
+/// leaves or changes role.
+model StaffAction {
+  id          BigInt   @id @default(autoincrement())
+  actorId     String   @map("actor_id") @db.Uuid
+  actorName   String?  @map("actor_name") @db.VarChar(120)
+  actorRole   String   @map("actor_role") @db.VarChar(40)
+  /// e.g. kyc.approve, kyc.final-approve, cds.complete
+  action      String   @db.VarChar(40)
+  /// kyc_case | cds_request
+  subjectType String   @map("subject_type") @db.VarChar(20)
+  subjectRef  String   @map("subject_ref") @db.VarChar(12)
+  investorId  String   @map("investor_id") @db.Uuid
+  note        String?  @db.VarChar(500)
+  at          DateTime @default(now()) @db.Timestamptz(6)
+
+  @@index([investorId, at])
+  @@index([actorId, at])
+  @@map("staff_actions")
 }

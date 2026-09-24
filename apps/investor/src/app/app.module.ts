@@ -12,6 +12,7 @@ import { CbsEventsConsumer } from '../kyc/cbs-events.consumer';
 import { CdsService } from '../kyc/cds.service';
 import { DecisionsService } from '../kyc/decisions.service';
 import { CdsController, KycController } from '../kyc/kyc.controller';
+import { InvestorLookupController, InvestorLookupService } from '../kyc/investor-lookup';
 import { KycService } from '../kyc/kyc.service';
 import { StatusNotifier } from '../notify/status-notifier';
 import { OnboardingController } from '../onboarding/onboarding.controller';
@@ -51,7 +52,8 @@ const bootConfig = loadConfig();
       inject: [CONFIG],
     }),
   ],
-  controllers: [HealthController, OnboardingController, KycController, CdsController],
+  // OnboardingController first: its /v1/investors/me must match before /:reference.
+  controllers: [HealthController, OnboardingController, KycController, CdsController, InvestorLookupController],
   providers: [
     IdentityClient,
     CbsClient,
@@ -88,6 +90,7 @@ const bootConfig = loadConfig();
     OnboardingService,
     KycService,
     CdsService,
+    InvestorLookupService,
     CbsEventsConsumer,
     {
       provide: APP_GUARD,

@@ -2,7 +2,9 @@ import { ConflictException, Injectable, NotFoundException } from '@nestjs/common
 import { INVESTOR_EVENTS, type CdsOpenedPayload } from '@govsec/events';
 import { StatusNotifier } from '../notify/status-notifier';
 import { PrismaService } from '../prisma/prisma.service';
+import type { AuthenticatedUser } from '@govsec/auth';
 import { event } from './decisions.service';
+import { audit } from './kyc.service';
 
 /**
  * CDS account opening as a back-office task.
@@ -40,7 +42,7 @@ export class CdsService {
     });
   }
 
-  async complete(reference: string, cdsAccount: string, actorId: string) {
+  async complete(reference: string, cdsAccount: string, actor: AuthenticatedUser) {
     const request = await this.prisma.cdsRequest.findUnique({
       where: { reference },
       include: { investor: { include: { individual: true } } },
@@ -64,7 +66,13 @@ export class CdsService {
     await this.prisma.$transaction(async (tx) => {
       const done = await tx.cdsRequest.updateMany({
         where: { id: request.id, status: 'pending' },
-        data: { status: 'completed', cdsAccount, completedBy: actorId, completedAt: now },
+        data: {
+          status: 'completed',
+          cdsAccount,
+          completedBy: actor.accountId,
+          completedByName: actor.name ?? null,
+          completedAt: now,
+        },
       });
       if (done.count !== 1) {
         throw new ConflictException({ code: 'already_completed', message: 'This CDS account has already been recorded' });
@@ -72,6 +80,9 @@ export class CdsService {
       await tx.investor.update({
         where: { id: request.investorId },
         data: { cdsStatus: 'active', cdsAccount },
+      });
+      await tx.staffAction.create({
+        data: audit(actor, 'cds.complete', request, `CDS account ${cdsAccount}`, now, 'cds_request'),
       });
       await tx.outboxMessage.createMany({
         skipDuplicates: true,
