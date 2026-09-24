@@ -42,13 +42,12 @@ const year = new Date().getFullYear();
 <template>
   <div class="auth">
     <aside class="panel">
-      <svg class="mark" viewBox="0 0 200 200" aria-hidden="true">
-        <polygon class="y" points="0,0 64,0 100,36 36,36 36,150 0,186" />
-        <polygon class="g" points="92,0 200,0 200,84 164,48 164,36 128,36" />
-        <polygon class="b" points="164,76 200,112 200,200 12,200 48,164 164,164" />
-      </svg>
-
       <div class="pitch">
+        <svg class="mark" viewBox="0 0 200 200" aria-hidden="true">
+          <polygon class="y" points="0,0 64,0 100,36 36,36 36,150 0,186" />
+          <polygon class="g" points="92,0 200,0 200,84 164,48 164,36 128,36" />
+          <polygon class="b" points="164,76 200,112 200,200 12,200 48,164 164,164" />
+        </svg>
         <div class="kicker"><BrandBars />Government Securities</div>
         <h2 class="headline">{{ copy.headline }}</h2>
         <p class="sub">{{ copy.sub }}</p>
@@ -109,17 +108,18 @@ const year = new Date().getFullYear();
   padding: 48px 56px 32px;
   display: flex;
   flex-direction: column;
-  justify-content: space-between;
-  gap: 40px;
 }
-/* The mark, large and running off the right edge: recognisably TCB's frame, used as a
-   graphic rather than as a second logo. In the flow, not absolutely placed, so the
-   text below can never run into it however narrow the panel gets. */
+/* Auto margins centre the group in whatever height is left above the legal line, and
+   push that line to the bottom: the two can never overlap, however short the screen. */
+.pitch {
+  margin: auto 0;
+}
+/* The mark, whole and above the text it introduces: one group, centred in the panel,
+   so there is no empty band. Kept well below the logo's visual weight on the right. */
 .mark {
-  align-self: flex-end;
-  flex: none;
-  width: min(70%, 340px);
-  margin: 8px -104px 0 0;
+  display: block;
+  width: min(40%, 180px);
+  margin-bottom: 36px;
 }
 .mark .y {
   fill: var(--brand-yellow);
@@ -185,8 +185,7 @@ const year = new Date().getFullYear();
   stroke-linejoin: round;
 }
 .legal {
-  position: relative;
-  margin: 0;
+  margin: 32px 0 0;
   font-size: 12px;
   color: var(--on-navy-faint);
 }
@@ -269,13 +268,9 @@ const year = new Date().getFullYear();
 
 /* Short screens (a 768px-tall laptop): the mark gives way before the text does. */
 @media (max-height: 820px) and (min-width: 961px) {
-  .panel {
-    padding-top: 32px;
-    gap: 24px;
-  }
   .mark {
-    width: min(50%, 200px);
-    margin-right: -64px;
+    width: min(30%, 120px);
+    margin-bottom: 24px;
   }
   .headline {
     font-size: 28px;
@@ -292,7 +287,6 @@ const year = new Date().getFullYear();
   .panel {
     min-height: 0;
     padding: 20px 20px 18px;
-    gap: 0;
   }
   /* A slice of the frame reads as a stray bar at this size; the kicker's brand bars
      carry the colours instead. */

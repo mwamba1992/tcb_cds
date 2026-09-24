@@ -69,8 +69,7 @@ async function signIn() {
     </form>
     <template #dev>
       <div class="dev">
-        <span class="dev-tag">Development</span>
-        <span class="dev-label">Sign in as</span>
+        <div class="dev-head"><span class="dev-tag">Development</span> Sign in as</div>
         <button v-for="a in DEV_ACCOUNTS" :key="a.username" type="button" class="dev-chip" @click="fill(a.username)">
           {{ a.role }}
         </button>
@@ -96,6 +95,13 @@ async function signIn() {
   flex-wrap: wrap;
   font-size: 12px;
   color: var(--muted);
+}
+.dev-head {
+  flex-basis: 100%;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 2px;
 }
 .dev-tag {
   background: var(--amber-bg);
