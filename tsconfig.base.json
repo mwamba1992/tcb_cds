@@ -51,6 +51,9 @@
       ],
       "@govsec/auth/roles": [
         "./libs/auth/src/lib/roles.ts"
+      ],
+      "@govsec/bot-simulator": [
+        "./libs/bot-simulator/src/index.ts"
       ]
     }
   },

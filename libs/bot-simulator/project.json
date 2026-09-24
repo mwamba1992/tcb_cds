@@ -1,0 +1,8 @@
+{
+  "name": "bot-simulator-lib",
+  "$schema": "../../node_modules/nx/schemas/project-schema.json",
+  "sourceRoot": "libs/bot-simulator/src",
+  "projectType": "library",
+  "tags": ["type:lib", "domain:bot-simulator"],
+  "targets": {}
+}

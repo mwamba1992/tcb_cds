@@ -60,6 +60,17 @@ export default [
             { sourceTag: 'domain:notification', notDependOnLibsWithTags: ['domain:bot-client'] },
             { sourceTag: 'domain:portal', notDependOnLibsWithTags: ['domain:bot-client'] },
 
+            // The simulator is a development and test tool. Only bot-gateway (in its tests)
+            // and the simulator's own runner may import it, so it can never be wired into a
+            // path that handles real bids.
+            ...['identity', 'investor', 'auction', 'cbs-gateway', 'settlement', 'notification', 'portal'].map(
+              (domain) => ({
+                sourceTag: `domain:${domain}`,
+                notDependOnLibsWithTags: ['domain:bot-simulator'],
+              }),
+            ),
+            { sourceTag: 'scope:shared', notDependOnLibsWithTags: ['domain:bot-simulator'] },
+
             { sourceTag: '*', onlyDependOnLibsWithTags: ['*'] },
           ],
         },
