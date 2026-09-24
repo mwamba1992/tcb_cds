@@ -37,8 +37,22 @@ const CUSTOMERS: readonly CbsCustomer[] = [
   },
 ];
 
+/** TZS ledger balances in minor units. Accounts opened by the stub start with 50 million. */
+const BALANCES: Record<string, bigint> = {
+  '0150311875201': 120_000_000_00n,
+  '0150286411001': 35_000_000_00n,
+  '0150199024301': 6_200_000_00n,
+};
+const NEW_ACCOUNT_BALANCE = 50_000_000_00n;
+
 export class StubCoreBanking implements CoreBanking {
   private readonly logger = new Logger('StubCoreBanking');
+
+  async ledgerBalance(accountNumber: string): Promise<bigint | null> {
+    if (BALANCES[accountNumber] !== undefined) return BALANCES[accountNumber];
+    // Accounts the stub "opened" for new-to-bank investors follow TCB's 0150… pattern.
+    return /^0150\d{9}$/.test(accountNumber) ? NEW_ACCOUNT_BALANCE : null;
+  }
 
   async findCustomerByNida(nidaNumber: string): Promise<CbsCustomer | null> {
     return CUSTOMERS.find((c) => c.nidaNumber === nidaNumber) ?? null;

@@ -6,6 +6,8 @@ import { DEAD_LETTER_EXCHANGE, EXCHANGES } from '@govsec/events';
 import { OutboxRelay, OUTBOX_OPTIONS, OUTBOX_STORE } from '@govsec/outbox';
 import { AccountOpeningService } from '../core-banking/account-opening.service';
 import { CORE_BANKING } from '../core-banking/core-banking';
+import { HoldsController } from '../core-banking/holds.controller';
+import { HoldsService } from '../core-banking/holds.service';
 import { InternalCbsController } from '../core-banking/internal-cbs.controller';
 import { StubCoreBanking } from '../core-banking/stub-core-banking';
 import { CbsGatewayConfigModule } from '../config/config.module';
@@ -40,7 +42,7 @@ const bootConfig = loadConfig();
       inject: [CONFIG],
     }),
   ],
-  controllers: [HealthController, InternalCbsController],
+  controllers: [HealthController, InternalCbsController, HoldsController],
   providers: [
     // Only the stub exists until TCB publishes its Core Banking API; loadConfig()
     // refuses production without CBS_MODE=live, so the stub cannot reach a customer.
@@ -55,6 +57,7 @@ const bootConfig = loadConfig();
       inject: [CONFIG],
     },
     AccountOpeningService,
+    HoldsService,
     {
       provide: APP_GUARD,
       useFactory: (reflector: Reflector) =>

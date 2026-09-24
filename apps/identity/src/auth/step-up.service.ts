@@ -6,6 +6,7 @@ import { CONFIG, durationMs, type IdentityConfig } from '../config/configuration
 import { PrismaService } from '../prisma/prisma.service';
 import { AuthError } from './auth-errors';
 import { PinService } from './pin.service';
+import { StaffAuthService } from './staff-auth.service';
 import { TokenService } from './token.service';
 
 /**
@@ -20,8 +21,25 @@ export class StepUpService {
     private readonly prisma: PrismaService,
     private readonly pins: PinService,
     private readonly tokens: TokenService,
+    private readonly staff: StaffAuthService,
     @Inject(CONFIG) private readonly config: IdentityConfig,
   ) {}
+
+  /**
+   * Staff approval of one action (a batch to BoT) by re-entering the password.
+   * Development only; production re-authenticates through TCB's directory.
+   */
+  async grantStaff(accountId: string, role: Role, input: { password: string; scope: string }) {
+    const scope = input.scope as Permission;
+    if (!requiresStepUp(scope)) {
+      throw new BadRequestException(`"${input.scope}" is not an action that needs approval`);
+    }
+    if (!permissionsForRole(role).includes(scope)) {
+      throw new AuthError(HttpStatus.FORBIDDEN, 'action_not_permitted', 'Your role cannot perform this action');
+    }
+    await this.staff.confirm(accountId, input.password);
+    return this.issue(accountId, scope, undefined);
+  }
 
   async grant(
     accountId: string,
@@ -53,6 +71,10 @@ export class StepUpService {
     if (!account) throw new NotFoundException('Account not found');
     await this.pins.verify(account, input.pin, 'signed_in');
 
+    return this.issue(accountId, scope, maxAmountMinor);
+  }
+
+  private async issue(accountId: string, scope: Permission, maxAmountMinor: bigint | undefined) {
     const grantId = randomUUID();
     await this.prisma.stepUpGrant.create({
       data: {

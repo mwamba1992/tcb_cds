@@ -3,7 +3,18 @@ import { Module } from '@nestjs/common';
 import { APP_GUARD, Reflector } from '@nestjs/core';
 import { GovsecAuthModule, ServiceAuthGuard } from '@govsec/auth';
 import { DEAD_LETTER_EXCHANGE, EXCHANGES } from '@govsec/events';
+import { NotifyClient } from '@govsec/notify';
 import { OutboxRelay, OUTBOX_OPTIONS, OUTBOX_STORE } from '@govsec/outbox';
+import { StaffAuctionsController } from '../batches/batches.controller';
+import { BatchesService } from '../batches/batches.service';
+import { InvestorAuctionsController } from '../bids/bids.controller';
+import { BidsService } from '../bids/bids.service';
+import { BotAuctionsConsumer } from '../catalogue/bot-auctions.consumer';
+import { CatalogueRefresher } from '../catalogue/catalogue.refresher';
+import { CatalogueService } from '../catalogue/catalogue.service';
+import { Neighbours } from '../clients/clients';
+import { BotResultsConsumer } from '../results/bot-results.consumer';
+import { ResultsService } from '../results/results.service';
 import { AuctionConfigModule } from '../config/config.module';
 import { CONFIG, loadConfig, type AuctionConfig } from '../config/configuration';
 import { HealthController } from '../health/health.controller';
@@ -28,6 +39,8 @@ const bootConfig = loadConfig();
         uri: config.rabbitmq.url,
         exchanges: [
           { name: EXCHANGES.auction, type: 'topic', options: { durable: true } },
+          // Consumed: declared here too so bindings never race bot-gateway's startup.
+          { name: EXCHANGES.bot, type: 'topic', options: { durable: true } },
           { name: DEAD_LETTER_EXCHANGE, type: 'topic', options: { durable: true } },
         ],
         connectionInitOptions: { wait: true, timeout: 10_000 },
@@ -36,8 +49,26 @@ const bootConfig = loadConfig();
       inject: [CONFIG],
     }),
   ],
-  controllers: [HealthController],
+  controllers: [HealthController, InvestorAuctionsController, StaffAuctionsController],
   providers: [
+    Neighbours,
+    {
+      provide: NotifyClient,
+      useFactory: (config: AuctionConfig) =>
+        new NotifyClient({
+          notificationUrl: config.services.notificationUrl,
+          internalSecret: config.internalSecret,
+          serviceName: 'auction',
+        }),
+      inject: [CONFIG],
+    },
+    CatalogueService,
+    CatalogueRefresher,
+    BidsService,
+    BatchesService,
+    ResultsService,
+    BotAuctionsConsumer,
+    BotResultsConsumer,
     {
       provide: APP_GUARD,
       useFactory: (reflector: Reflector) =>

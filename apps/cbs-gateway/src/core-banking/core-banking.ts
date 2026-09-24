@@ -26,6 +26,8 @@ export interface CbsCustomer {
 export interface CoreBanking {
   findCustomerByNida(nidaNumber: string): Promise<CbsCustomer | null>;
   findCustomerByAccount(accountNumber: string): Promise<CbsCustomer | null>;
+  /** Ledger balance of a TZS account, in minor units; null when the account is unknown. */
+  ledgerBalance(accountNumber: string): Promise<bigint | null>;
   /** Hands an account-opening request to Core Banking; returns its own reference. */
   submitAccountOpening(request: {
     reference: string;

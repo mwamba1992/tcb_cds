@@ -45,6 +45,26 @@ export const TEMPLATES = {
     en: '{name}, your CDS account {cds} is open. You can now bid in Treasury Bill and Bond auctions with TCB.',
     sw: '{name}, akaunti yako ya CDS {cds} imefunguliwa. Sasa unaweza kununua Hati Fungani na Dhamana za Serikali kupitia TCB.',
   },
+  'bid.placed': {
+    en: 'TCB Govt Securities: bid {reference} for TZS {amount} face value of {security} received. TZS {held} is held on your account until the result.',
+    sw: 'TCB Dhamana za Serikali: zabuni {reference} ya TZS {amount} kwa {security} imepokelewa. TZS {held} imezuiliwa kwenye akaunti yako hadi matokeo.',
+  },
+  'bid.allotted': {
+    en: 'TCB Govt Securities: bid {reference} was successful. Allotted TZS {allotted} face value of {security} at {price}.',
+    sw: 'TCB Dhamana za Serikali: zabuni {reference} imefanikiwa. Umepata TZS {allotted} ya {security} kwa bei {price}.',
+  },
+  'bid.partially_allotted': {
+    en: 'TCB Govt Securities: bid {reference} was partly successful: TZS {allotted} of TZS {amount} face value of {security} at {price}. The rest of your held funds is released.',
+    sw: 'TCB Dhamana za Serikali: zabuni {reference} imefanikiwa kwa sehemu: TZS {allotted} kati ya TZS {amount} ya {security} kwa bei {price}. Kiasi kilichobaki kimeachiliwa.',
+  },
+  'bid.unsuccessful': {
+    en: 'TCB Govt Securities: bid {reference} for {security} was not successful. TZS {held} held on your account has been released.',
+    sw: 'TCB Dhamana za Serikali: zabuni {reference} ya {security} haikufanikiwa. TZS {held} iliyozuiliwa imeachiliwa.',
+  },
+  'bid.rejected': {
+    en: 'TCB Govt Securities: the Bank of Tanzania could not accept bid {reference}. TZS {held} held on your account has been released. Call TCB on 0800 780 100.',
+    sw: 'TCB Dhamana za Serikali: Benki Kuu haikuweza kupokea zabuni {reference}. TZS {held} imeachiliwa. Piga TCB 0800 780 100.',
+  },
 } as const satisfies Record<string, Record<Locale, string>>;
 
 export type TemplateKey = keyof typeof TEMPLATES;

@@ -56,3 +56,22 @@ model AccountOpeningRequest {
   @@index([status])
   @@map("account_opening_requests")
 }
+
+/// Funds held on a customer's TCB account for a bid: a lien at Core Banking, recorded
+/// here so the platform knows what it holds and can release it exactly once.
+model FundsHold {
+  id            String    @id @default(uuid()) @db.Uuid
+  /// The bid's BD- reference; one hold per bid.
+  reference     String    @unique @db.VarChar(12)
+  accountNumber String    @map("account_number") @db.VarChar(20)
+  /// TZS minor units (cents).
+  amount        BigInt
+  /// held | released | debited
+  status        String    @default("held") @db.VarChar(10)
+  createdAt     DateTime  @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt     DateTime  @updatedAt @map("updated_at") @db.Timestamptz(6)
+  releasedAt    DateTime? @map("released_at") @db.Timestamptz(6)
+
+  @@index([accountNumber, status])
+  @@map("funds_holds")
+}

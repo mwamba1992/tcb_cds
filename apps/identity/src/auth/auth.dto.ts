@@ -107,3 +107,14 @@ export class StaffSignInDto {
   @Length(1, 200)
   password!: string;
 }
+
+export class StaffStepUpDto {
+  @ApiProperty()
+  @IsString()
+  @Length(1, 200)
+  password!: string;
+
+  @ApiProperty({ enum: STEP_UP_REQUIRED, example: 'batch:approve' })
+  @IsIn([...STEP_UP_REQUIRED])
+  scope!: string;
+}

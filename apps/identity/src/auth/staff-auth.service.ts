@@ -25,6 +25,17 @@ export class StaffAuthService {
     @Inject(CONFIG) private readonly config: IdentityConfig,
   ) {}
 
+  /**
+   * Re-confirm a signed-in staff member's password, for a step-up. Wrong answers count
+   * toward the same lockout as sign-in.
+   */
+  async confirm(accountId: string, password: string): Promise<void> {
+    if (!this.config.staffPasswordLogin) throw new NotFoundException();
+    const account = await this.prisma.account.findUnique({ where: { id: accountId } });
+    if (!account?.username) throw new AuthError(HttpStatus.FORBIDDEN, 'invalid_credentials', 'Not a staff account');
+    await this.verify(account.username, password);
+  }
+
   /** Returns the account id when the credentials are right. */
   async verify(username: string, password: string): Promise<string> {
     // Not found, not forbidden: a production deployment does not have this endpoint.

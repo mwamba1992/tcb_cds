@@ -32,3 +32,121 @@ model OutboxMessage {
   @@index([sentAt, id])
   @@map("outbox_messages")
 }
+
+/// An auction as BoT published it, with TCB's own cut-off. Kept from bot.auction.*
+/// events; nothing here is parsed from BoT directly.
+model Auction {
+  id                  String    @id @default(uuid()) @db.Uuid
+  isin                String    @unique @db.VarChar(12)
+  name                String    @db.VarChar(120)
+  /// bill | bond
+  instrument          String    @db.VarChar(4)
+  auctionDate         DateTime? @map("auction_date") @db.Date
+  maturityDate        DateTime? @map("maturity_date") @db.Date
+  competitiveOffer    String    @map("competitive_offer") @db.VarChar(24)
+  nonCompetitiveOffer String    @map("non_competitive_offer") @db.VarChar(24)
+  /// open | closed | unknown — BoT's view.
+  botStatus           String    @map("bot_status") @db.VarChar(10)
+  /// When BoT closes (auction date + configured close time).
+  botCloseAt          DateTime? @map("bot_close_at") @db.Timestamptz(6)
+  /// When TCB stops taking bids. Earlier than botCloseAt; can be brought forward by staff.
+  tcbCutoffAt         DateTime? @map("tcb_cutoff_at") @db.Timestamptz(6)
+  closedEarlyBy       String?   @map("closed_early_by") @db.VarChar(120)
+  closedEarlyReason   String?   @map("closed_early_reason") @db.VarChar(500)
+  createdAt           DateTime  @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt           DateTime  @updatedAt @map("updated_at") @db.Timestamptz(6)
+
+  bids    Bid[]
+  batches Batch[]
+
+  @@map("auctions")
+}
+
+/// One investor's bid. Amounts: faceValue in whole TZS; held in TZS minor units.
+model Bid {
+  id                      String   @id @default(uuid()) @db.Uuid
+  /// BD-…, what the investor quotes; also the hold reference at Core Banking.
+  reference               String   @unique @db.VarChar(12)
+  auctionId               String   @map("auction_id") @db.Uuid
+  isin                    String   @db.VarChar(12)
+  investorId              String   @map("investor_id") @db.Uuid
+  accountId               String   @map("account_id") @db.Uuid
+  /// Copied at bid time: what BoT and Core Banking were told.
+  cdsAccount              String   @map("cds_account") @db.VarChar(20)
+  bankAccount             String   @map("bank_account") @db.VarChar(20)
+  competitive             Boolean
+  faceValue               BigInt   @map("face_value")
+  /// Price per 100 in hundredths (88.50 → 8850); null for non-competitive.
+  priceHundredths         Int?     @map("price_hundredths")
+  heldMinor               BigInt   @map("held_minor")
+  /// placed | withdrawn | in_batch | submitted | accepted | rejected | allotted |
+  /// partially_allotted | unsuccessful
+  status                  String   @default("placed") @db.VarChar(20)
+  channel                 String   @default("web") @db.VarChar(10)
+  batchId                 String?  @map("batch_id") @db.Uuid
+  botRequestId            String?  @unique @map("bot_request_id") @db.VarChar(64)
+  allottedFaceValue       BigInt?  @map("allotted_face_value")
+  allottedPriceHundredths Int?     @map("allotted_price_hundredths")
+  botMessage              String?  @map("bot_message") @db.VarChar(300)
+  /// The client's Idempotency-Key, unique per account: a retried POST returns this bid.
+  idempotencyKey          String?  @map("idempotency_key") @db.VarChar(80)
+  createdAt               DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt               DateTime @updatedAt @map("updated_at") @db.Timestamptz(6)
+
+  auction Auction @relation(fields: [auctionId], references: [id])
+  batch   Batch?  @relation(fields: [batchId], references: [id])
+
+  @@unique([accountId, idempotencyKey])
+  @@index([accountId, createdAt])
+  @@index([isin, status])
+  @@index([batchId])
+  @@map("bids")
+}
+
+/// The bids for one auction, sent to BoT under one batch reference, with maker-checker.
+model Batch {
+  id             String    @id @default(uuid()) @db.Uuid
+  /// BoT's format: PARTICIP-YYMMDD-NNN.
+  reference      String    @unique @db.VarChar(19)
+  auctionId      String    @map("auction_id") @db.Uuid
+  isin           String    @db.VarChar(12)
+  /// prepared | approved | submitted | failed | reconciled
+  status         String    @default("prepared") @db.VarChar(12)
+  bidCount       Int       @map("bid_count")
+  totalFaceValue BigInt    @map("total_face_value")
+  totalHeldMinor BigInt    @map("total_held_minor")
+  preparedBy     String    @map("prepared_by") @db.Uuid
+  preparedByName String?   @map("prepared_by_name") @db.VarChar(120)
+  preparedAt     DateTime  @default(now()) @map("prepared_at") @db.Timestamptz(6)
+  approvedBy     String?   @map("approved_by") @db.Uuid
+  approvedByName String?   @map("approved_by_name") @db.VarChar(120)
+  approvedAt     DateTime? @map("approved_at") @db.Timestamptz(6)
+  submittedAt    DateTime? @map("submitted_at") @db.Timestamptz(6)
+  reconciledAt   DateTime? @map("reconciled_at") @db.Timestamptz(6)
+  lastError      String?   @map("last_error") @db.VarChar(500)
+
+  auction Auction @relation(fields: [auctionId], references: [id])
+  bids    Bid[]
+
+  @@index([status, preparedAt])
+  @@map("batches")
+}
+
+/// A BoT outcome for a requestId, kept until that requestId is matched to a bid.
+/// BoT may call back before reconciliation has told us which bid a requestId is.
+model BidOutcome {
+  id                BigInt    @id @default(autoincrement())
+  /// The event's idempotency key: a redelivered event is stored once.
+  eventKey          String    @unique @map("event_key") @db.VarChar(200)
+  requestId         String    @map("request_id") @db.VarChar(64)
+  /// accepted | rejected | allotted | unsuccessful
+  outcome           String    @db.VarChar(14)
+  allottedFaceValue String?   @map("allotted_face_value") @db.VarChar(24)
+  allottedPrice     String?   @map("allotted_price") @db.VarChar(12)
+  message           String?   @db.VarChar(300)
+  receivedAt        DateTime  @map("received_at") @db.Timestamptz(6)
+  appliedAt         DateTime? @map("applied_at") @db.Timestamptz(6)
+
+  @@index([requestId, appliedAt])
+  @@map("bid_outcomes")
+}

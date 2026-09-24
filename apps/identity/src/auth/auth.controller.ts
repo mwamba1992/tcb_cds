@@ -11,6 +11,7 @@ import {
   SetPinDto,
   SignInDto,
   StaffSignInDto,
+  StaffStepUpDto,
   StartPinResetDto,
   StartRegistrationDto,
   StepUpDto,
@@ -109,6 +110,14 @@ export class AuthController {
   @ApiOperation({ summary: 'Approve one action with the PIN; returns the pin_token' })
   async stepUp(@CurrentUser() user: AuthenticatedUser, @Body() dto: StepUpDto) {
     return this.stepUps.grant(user.accountId, user.role, dto);
+  }
+
+  @ApiBearerAuth()
+  @Post('staff/step-up')
+  @HttpCode(HttpStatus.OK)
+  @ApiOperation({ summary: 'Development only: staff approve one action by re-entering their password' })
+  async staffStepUp(@CurrentUser() user: AuthenticatedUser, @Body() dto: StaffStepUpDto) {
+    return this.stepUps.grantStaff(user.accountId, user.role, dto);
   }
 
   @ApiBearerAuth()

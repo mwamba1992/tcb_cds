@@ -15,6 +15,26 @@ export interface AuctionConfig {
   rabbitmq: { url: string };
   internalSecret: string;
   outbox: { pollIntervalMs: number; batchSize: number };
+  services: {
+    identityUrl: string;
+    investorUrl: string;
+    cbsGatewayUrl: string;
+    botGatewayUrl: string;
+    notificationUrl: string;
+  };
+  bidding: {
+    /** BoT's closing time on auction day, HH:MM EAT. BoT has not published it (Appendix B4). */
+    botCloseTime: string;
+    /** TCB closes bidding this many hours before BoT, for maker-checker and submission. */
+    cutoffHoursBeforeBot: number;
+    /** Commission in basis points of face value; held with the bid. */
+    commissionBps: number;
+    minimumBill: number;
+    minimumBond: number;
+    bidMultiple: number;
+  };
+  /** BoT participant code, for batch references. */
+  participantCode: string;
 }
 
 class ConfigError extends Error {
@@ -64,7 +84,32 @@ export function loadConfig(): AuctionConfig {
       pollIntervalMs: optionalNumber('OUTBOX_POLL_INTERVAL_MS', 1000),
       batchSize: optionalNumber('OUTBOX_BATCH_SIZE', 100),
     },
+    services: {
+      identityUrl: optional('IDENTITY_URL') ?? 'http://localhost:3101',
+      investorUrl: optional('INVESTOR_URL') ?? 'http://localhost:3102',
+      cbsGatewayUrl: optional('CBS_GATEWAY_URL') ?? 'http://localhost:3105',
+      botGatewayUrl: optional('BOT_GATEWAY_URL') ?? 'http://localhost:3104',
+      notificationUrl: optional('NOTIFICATION_URL') ?? 'http://localhost:3107',
+    },
+    bidding: {
+      botCloseTime: optional('BOT_AUCTION_CLOSE_TIME') ?? '10:00',
+      cutoffHoursBeforeBot: optionalNumber('TCB_CUTOFF_HOURS_BEFORE_BOT', 3),
+      commissionBps: optionalNumber('BID_COMMISSION_BPS', 0),
+      minimumBill: optionalNumber('BID_MINIMUM_BILL', 500_000),
+      minimumBond: optionalNumber('BID_MINIMUM_BOND', 1_000_000),
+      bidMultiple: optionalNumber('BID_MULTIPLE', 100_000),
+    },
+    participantCode: required('BOT_PARTICIPANT_CODE'),
   };
+  if (!/^([01]\d|2[0-3]):[0-5]\d$/.test(config.bidding.botCloseTime)) {
+    throw new ConfigError('BOT_AUCTION_CLOSE_TIME must be HH:MM (EAT)');
+  }
+  if (config.bidding.minimumBill < 500_000) {
+    throw new ConfigError('BID_MINIMUM_BILL cannot be below BoT\'s TZS 500,000 minimum');
+  }
+  if (!/^[A-Z0-9]{8}$/.test(config.participantCode)) {
+    throw new ConfigError('BOT_PARTICIPANT_CODE must be 8 letters or digits');
+  }
 
   if (nodeEnv === 'production') {
     if (!rs256) {

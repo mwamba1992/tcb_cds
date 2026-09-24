@@ -1,3 +1,4 @@
+import { InternalAuctionsController } from '../auctions/auctions.controller';
 import { RabbitMQModule } from '@golevelup/nestjs-rabbitmq';
 import { Module } from '@nestjs/common';
 import { APP_GUARD, Reflector } from '@nestjs/core';
@@ -65,7 +66,7 @@ function readBotPublicKey(path: string | undefined): string | null {
       inject: [CONFIG],
     }),
   ],
-  controllers: [HealthController, CallbackController, BatchController, BidsController],
+  controllers: [HealthController, CallbackController, BatchController, BidsController, InternalAuctionsController],
   providers: [
     {
       provide: APP_GUARD,
