@@ -1,4 +1,5 @@
 import { ref, shallowRef } from 'vue';
+import { AccountError } from '../api/live/http';
 import { ApiError } from '../api/types';
 
 /**
@@ -18,7 +19,7 @@ export function useAsync() {
       return await task();
     } catch (caught) {
       error.value =
-        caught instanceof ApiError
+        caught instanceof ApiError || caught instanceof AccountError
           ? caught.message
           : 'Something went wrong. Please try again, or contact TCB if it continues.';
       return undefined;

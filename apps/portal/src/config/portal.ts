@@ -12,3 +12,10 @@ export const HAS_STAFF = PORTAL !== 'investor';
 
 /** Demo controls. Off in both production builds. */
 export const DEMO = import.meta.env.VITE_DEMO === 'true';
+
+/**
+ * Investor sign-in, registration and onboarding talk to the real services (through the
+ * dev server's proxy, or the gateway in production). The rest of the investor portal
+ * and all of the back-office are still mocked. The offline demo build leaves this off.
+ */
+export const LIVE_AUTH = import.meta.env.VITE_AUTH === 'live';

@@ -35,7 +35,16 @@ export default defineConfig(({ mode }) => {
   return {
     root: import.meta.dirname,
     cacheDir: '../../node_modules/.vite/apps/portal',
-    server: { port: 4400, host: 'localhost' },
+    server: {
+      port: 4400,
+      host: 'localhost',
+      // Same-origin in development, as behind TCB's gateway in production: no CORS,
+      // and tokens never go to a second origin.
+      proxy: {
+        '/api/identity': { target: 'http://localhost:3101', rewrite: (p) => p.replace(/^\/api\/identity/, '') },
+        '/api/investor': { target: 'http://localhost:3102', rewrite: (p) => p.replace(/^\/api\/investor/, '') },
+      },
+    },
     preview: { port: 4410, host: 'localhost' },
     plugins: [vue(), nxViteTsPaths()],
     resolve: { alias },

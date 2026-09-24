@@ -1,8 +1,11 @@
 import type { Permission } from '@govsec/auth/roles';
 import { defineStore } from 'pinia';
 import { computed, ref } from 'vue';
-import { HAS_INVESTOR, HAS_STAFF } from '../config/portal';
+import { permissionsForRole, ROLES } from '@govsec/auth/roles';
+import { HAS_INVESTOR, HAS_STAFF, LIVE_AUTH } from '../config/portal';
 import { PERSONAS, type StaffPersona } from '../config/personas';
+import type { SessionUser } from '../api/types';
+import { useAccountStore } from './account';
 
 export type Portal = 'investor' | 'staff';
 
@@ -17,9 +20,22 @@ export const useSessionStore = defineStore('session', () => {
   const portal = ref<Portal>(HAS_INVESTOR ? 'investor' : 'staff');
   const staffPersona = ref<StaffPersona>('checker');
 
-  const user = computed(() =>
-    portal.value === 'investor' ? PERSONAS.investor : PERSONAS[staffPersona.value],
-  );
+  const account = useAccountStore();
+
+  const user = computed<SessionUser>(() => {
+    if (portal.value !== 'investor') return PERSONAS[staffPersona.value];
+    if (!LIVE_AUTH) return PERSONAS.investor;
+    const name = account.displayName;
+    const parts = name.split(' ').filter((p) => /[A-Za-z]/.test(p));
+    return {
+      id: account.me?.accountId ?? '',
+      name,
+      initials: `${parts[0]?.charAt(0) ?? ''}${parts.length > 1 ? (parts.at(-1)?.charAt(0) ?? '') : ''}`,
+      role: ROLES.investor,
+      roleLabel: 'Individual investor',
+      permissions: permissionsForRole(ROLES.investor),
+    };
+  });
 
   function can(permission: Permission): boolean {
     return user.value.permissions.includes(permission);

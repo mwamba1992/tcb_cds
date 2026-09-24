@@ -280,6 +280,47 @@ h3 {
   outline-offset: -1px;
 }
 
+/* Text fields (names, addresses): the amount style above is too heavy for prose. */
+.input--text {
+  font-size: 15px;
+  font-weight: 400;
+  padding: 10px 12px;
+}
+select.input {
+  appearance: auto;
+}
+.input[aria-invalid='true'] {
+  border-color: var(--red-fg);
+}
+.pin-input {
+  font-family: var(--font-mono);
+  font-size: 20px;
+  letter-spacing: 0.4em;
+  width: 160px;
+  font-weight: 500;
+}
+.code-input {
+  font-family: var(--font-mono);
+  font-size: 20px;
+  letter-spacing: 0.3em;
+  width: 200px;
+  font-weight: 500;
+}
+.check {
+  display: flex;
+  gap: 10px;
+  align-items: flex-start;
+  font-size: 14px;
+  line-height: 1.45;
+}
+.check input {
+  margin-top: 3px;
+  width: 16px;
+  height: 16px;
+  flex: none;
+  accent-color: var(--navy);
+}
+
 /* ---------- notices ---------- */
 
 .notice {
@@ -289,6 +330,14 @@ h3 {
   border-radius: var(--radius-control);
   padding: 12px 14px;
   text-wrap: pretty;
+}
+.notice--info {
+  background: var(--blue-bg);
+  color: var(--navy);
+}
+.notice--success {
+  background: var(--green-bg);
+  color: var(--green-fg);
 }
 .notice--error {
   background: var(--red-bg);

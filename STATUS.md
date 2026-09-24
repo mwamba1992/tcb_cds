@@ -1,6 +1,6 @@
 # GovSec — Project Status
 
-**Last updated:** 2026-09-24 · **Current milestone:** M0 → M1 · **Next:** portal registration and sign-in screens on the real API (registration journey, part 4)
+**Last updated:** 2026-09-24 · **Current milestone:** M0 → M1 · **Next:** back-office KYC and CDS screens on the real API, with staff sign-in
 
 ## At a glance
 
@@ -65,6 +65,20 @@ Every service builds, boots, connects to its own schema and to RabbitMQ, and ans
   suspicious. No phone numbers or credentials in any payload.
 - Development: `OTP_FIXED_CODE=123456` (refused in production).
 - Not yet: staff sign-in (next round, with the back-office KYC screen), device binding.
+
+## portal: registration and sign-in (live)
+
+- `/register` (number → SMS code → PIN), `/login`, `/reset-pin`, and
+  `/invest/onboarding` (details → review and consents → progress timeline), on the
+  existing design system; phone and tablet widths checked.
+- Talks to identity and investor through the dev server's proxy (`/api/identity`,
+  `/api/investor`); `VITE_AUTH=live` in development and the investor build. The
+  offline demo build stays fully mocked.
+- Investor screens need a session; the bid screen needs onboarding finished; a
+  banner on every investor screen says what is missing. Session survives a reload
+  (refresh token in sessionStorage; moves to an HttpOnly cookie behind the gateway).
+- Still mocked: the dashboard, auctions and bids data, and the whole back-office.
+- Customer-facing messages come from error codes, never server text.
 
 ## investor + cbs-gateway (onboarding and KYC)
 

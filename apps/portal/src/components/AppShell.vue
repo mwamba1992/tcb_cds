@@ -1,7 +1,8 @@
 <script setup lang="ts">
 import { computed } from 'vue';
 import { useRoute, useRouter } from 'vue-router';
-import { DEMO, HAS_INVESTOR, HAS_STAFF } from '../config/portal';
+import { DEMO, HAS_INVESTOR, HAS_STAFF, LIVE_AUTH } from '../config/portal';
+import { useAccountStore } from '../stores/account';
 import type { StaffPersona } from '../config/personas';
 import { useOperationsStore } from '../stores/operations';
 import { useSessionStore, type Portal } from '../stores/session';
@@ -13,6 +14,13 @@ const session = useSessionStore();
 const ops = useOperationsStore();
 const route = useRoute();
 const router = useRouter();
+const account = useAccountStore();
+
+const canSignOut = computed(() => LIVE_AUTH && !isStaff.value && account.signedIn);
+async function signOut() {
+  await account.signOut();
+  await router.replace({ name: 'account-sign-in' });
+}
 
 const isStaff = computed(() => session.portal === 'staff');
 
@@ -113,6 +121,7 @@ const showPortalSwitch = DEMO && HAS_INVESTOR && HAS_STAFF;
           <div class="user-name">{{ session.user.name }}</div>
           <div class="user-role">{{ session.user.roleLabel }}</div>
         </div>
+        <button v-if="canSignOut" type="button" class="sign-out" @click="signOut">Sign out</button>
       </div>
     </aside>
 
@@ -280,6 +289,19 @@ const showPortalSwitch = DEMO && HAS_INVESTOR && HAS_STAFF;
 }
 .user-text {
   min-width: 0;
+  flex: 1;
+}
+.sign-out {
+  background: none;
+  border: 1px solid var(--navy-raised);
+  color: var(--on-navy-muted);
+  border-radius: var(--radius-control);
+  font-size: 12px;
+  padding: 4px 8px;
+  cursor: pointer;
+}
+.sign-out:hover {
+  color: var(--on-navy);
 }
 .user-name {
   font-size: 13px;

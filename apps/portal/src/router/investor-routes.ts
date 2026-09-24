@@ -8,6 +8,31 @@ import type { RouteRecordRaw } from 'vue-router';
  * so the internal site carries no investor screens either.
  */
 export const investorRoutes: RouteRecordRaw[] = [
+  // Sign-in and registration live with the investor routes, so the staff site has none.
+  {
+    path: '/login',
+    name: 'account-sign-in',
+    component: () => import('../views/account/SignInView.vue'),
+    meta: { portal: 'investor', layout: 'auth', public: true, title: 'Sign in' },
+  },
+  {
+    path: '/register',
+    name: 'account-register',
+    component: () => import('../views/account/RegisterView.vue'),
+    meta: { portal: 'investor', layout: 'auth', public: true, title: 'Create account' },
+  },
+  {
+    path: '/reset-pin',
+    name: 'account-reset-pin',
+    component: () => import('../views/account/ResetPinView.vue'),
+    meta: { portal: 'investor', layout: 'auth', public: true, title: 'Reset PIN' },
+  },
+  {
+    path: '/invest/onboarding',
+    name: 'investor-onboarding',
+    component: () => import('../views/investor/OnboardingView.vue'),
+    meta: { portal: 'investor', title: 'Your account' },
+  },
   {
     path: '/invest',
     name: 'investor-dashboard',
@@ -38,6 +63,7 @@ export const investorRoutes: RouteRecordRaw[] = [
       portal: 'investor',
       title: 'Place a bid',
       permission: PERMISSIONS.bidPlace,
+      needsBidding: true,
       navParent: 'investor-auctions',
     },
   },
