@@ -18,7 +18,9 @@ export interface Tokens {
 
 export interface Me {
   accountId: string;
-  phoneNumber: string;
+  phoneNumber: string | null;
+  username: string | null;
+  displayName: string | null;
   role: string;
   locale: 'sw' | 'en';
   pinSet: boolean;
@@ -31,6 +33,7 @@ export type NextStep =
   | 'under_review'
   | 'provide_info'
   | 'awaiting_cds'
+  | 'awaiting_bank'
   | 'ready'
   | 'rejected';
 

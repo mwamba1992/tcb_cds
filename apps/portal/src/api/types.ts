@@ -154,6 +154,13 @@ export interface KycCase {
   status: KycStatus;
   /** Who took the maker decision, so a checker can be refused if it was them. */
   makerId: string | null;
+  /** Live data only: the decisions as recorded, for the trail under the case. */
+  makerName?: string | null;
+  makerNote?: string | null;
+  checkerName?: string | null;
+  checkerNote?: string | null;
+  /** Live data only: every reason the checks gave, not just the headline. */
+  reasons?: string[];
 }
 
 export type KycAction = 'approve' | 'request-info' | 'reject' | 'final-approve' | 'return';

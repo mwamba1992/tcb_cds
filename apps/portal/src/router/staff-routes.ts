@@ -11,6 +11,12 @@ import type { RouteRecordRaw } from 'vue-router';
  */
 export const staffRoutes: RouteRecordRaw[] = [
   {
+    path: '/ops/login',
+    name: 'staff-sign-in',
+    component: () => import('../views/staff/StaffSignInView.vue'),
+    meta: { portal: 'staff', layout: 'auth', public: true, title: 'Back-office sign in' },
+  },
+  {
     path: '/ops',
     name: 'staff-overview',
     component: () => import('../views/staff/OverviewView.vue'),
@@ -30,6 +36,17 @@ export const staffRoutes: RouteRecordRaw[] = [
       title: 'KYC exceptions',
       permission: PERMISSIONS.kycReview,
       nav: { label: 'KYC exceptions', icon: 'kyc', order: 2 },
+    },
+  },
+  {
+    path: '/ops/cds',
+    name: 'staff-cds',
+    component: () => import('../views/staff/CdsView.vue'),
+    meta: {
+      portal: 'staff',
+      title: 'CDS accounts',
+      permission: PERMISSIONS.cdsOpen,
+      nav: { label: 'CDS accounts', icon: 'cds', order: 2.5 },
     },
   },
   {

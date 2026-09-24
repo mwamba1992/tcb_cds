@@ -7,6 +7,7 @@ const PATHS = {
   kyc: 'M15 20v-1a4 4 0 0 0-4-4H7a4 4 0 0 0-4 4v1M9 11a3.5 3.5 0 1 0 0-7 3.5 3.5 0 0 0 0 7zM16 11l2 2 4-4',
   submit: 'M21 3 10 14M21 3l-6.5 18-4-8-8-4z',
   recon: 'M4 8h14l-3-3M20 16H6l3 3',
+  cds: 'M4 7h16v12H4zM4 11h16M8 15h4M9 3h6v4H9z',
 } as const;
 
 export type IconName = keyof typeof PATHS;

@@ -1,6 +1,6 @@
 # GovSec — Project Status
 
-**Last updated:** 2026-09-24 · **Current milestone:** M0 → M1 · **Next:** back-office KYC and CDS screens on the real API, with staff sign-in
+**Last updated:** 2026-09-24 · **Current milestone:** M0 → M1 · **Next:** to be agreed (candidates: auction service bidding on real data; investor dashboard on real data)
 
 ## At a glance
 
@@ -9,8 +9,8 @@
 | Services scaffolded | **7 of 7**: identity, investor, auction, bot-gateway, cbs-gateway, settlement, notification |
 | Shared libraries    | 9: money, events, outbox, auth, settings, notify, reference, pagination, bot-client         |
 | Domain endpoints    | bot-gateway, notification, identity, investor (onboarding, KYC, CDS), cbs-gateway (stub)    |
-| Unit tests          | 194, all passing                                                                            |
-| Migrations          | 13                                                                                          |
+| Unit tests          | 198, all passing                                                                            |
+| Migrations          | 15                                                                                          |
 | CI                  | lint · test · typecheck · build, against real Postgres and RabbitMQ                         |
 
 Every service builds, boots, connects to its own schema and to RabbitMQ, and answers
@@ -65,6 +65,23 @@ Every service builds, boots, connects to its own schema and to RabbitMQ, and ans
   suspicious. No phone numbers or credentials in any payload.
 - Development: `OTP_FIXED_CODE=123456` (refused in production).
 - Not yet: staff sign-in (next round, with the back-office KYC screen), device binding.
+
+## back office on real data
+
+- Staff sign-in (development only: username + password, lockout after 5; refused in
+  production, where staff will use TCB's directory). `node scripts/dev-seed-staff.mjs`
+  creates rose.mollel (maker), salum.kweka (checker), neema.lyimo (compliance),
+  faraji.mrema (treasury); password `Govsec-dev-2026`.
+- KYC screen on the live queue: all reasons, a note with each decision, and the
+  maker and checker shown by name. Open queue plus the last three days' decisions.
+- New CDS accounts screen: record the number (typed twice; unique across investors).
+- Every staff action goes to the append-only `staff_actions` trail, in the same
+  transaction as the change. Investor lookup by NV- reference for staff.
+- A new-to-bank investor with CDS open but TCB account pending is `awaiting_bank`,
+  not ready; the "you can now bid" SMS goes only when both accounts exist.
+- Sessions are role-bound: an investor session cannot open the back office and vice
+  versa. Still mocked in the back office: overview figures, bid submission,
+  reconciliation.
 
 ## portal: registration and sign-in (live)
 

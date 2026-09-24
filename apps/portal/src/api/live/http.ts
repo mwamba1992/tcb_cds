@@ -67,7 +67,14 @@ export async function request<T>(
 }
 
 function toError(status: number, body: Record<string, unknown>): AccountError {
-  const code = typeof body['code'] === 'string' ? body['code'] : status === 400 ? 'invalid_input' : `http_${status}`;
+  const code =
+    typeof body['code'] === 'string'
+      ? body['code']
+      : status === 400
+        ? 'invalid_input'
+        : status === 403
+          ? 'forbidden'
+          : `http_${status}`;
   const detail = {
     ...(typeof body['retryAfterSeconds'] === 'number' ? { retryAfterSeconds: body['retryAfterSeconds'] } : {}),
     ...(typeof body['attemptsRemaining'] === 'number' ? { attemptsRemaining: body['attemptsRemaining'] } : {}),
@@ -93,9 +100,19 @@ export function messageFor(code: string, detail: AccountError['detail'], status:
     case 'invalid_credentials':
       return detail.attemptsRemaining !== undefined
         ? `Wrong PIN. ${detail.attemptsRemaining} ${detail.attemptsRemaining === 1 ? 'try' : 'tries'} left before your account is locked.`
-        : 'The phone number or PIN is incorrect.';
+        : 'The details you entered are incorrect.';
     case 'pin_locked':
       return 'Your account is locked after too many wrong PINs. Reset your PIN to continue.';
+    case 'maker_checker':
+      return 'You took the maker decision on this case. A different user must approve it.';
+    case 'invalid_state':
+      return 'Someone else has already acted on this. The list has been refreshed.';
+    case 'cds_account_in_use':
+      return 'That CDS account number already belongs to another investor. Check the number.';
+    case 'already_completed':
+      return 'This CDS account has already been recorded.';
+    case 'forbidden':
+      return 'Your role cannot do this.';
     case 'account_inactive':
       return 'This account is not active. Please call TCB on 0800 780 100.';
     case 'nida_already_registered':

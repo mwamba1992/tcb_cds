@@ -1,6 +1,7 @@
 import { defineStore } from 'pinia';
 import { computed, ref, shallowRef } from 'vue';
 import { accountApi, type IndividualProfile, type Me, type Onboarding, type Tokens } from '../api/live/account';
+import { backofficeApi } from '../api/live/backoffice';
 import { useTokens } from '../api/live/http';
 
 const REFRESH_KEY = 'govsec.refresh';
@@ -20,7 +21,11 @@ export const useAccountStore = defineStore('account', () => {
   const restored = ref(false);
 
   const signedIn = computed(() => accessToken.value !== null);
+  /** Known once `me` has loaded; the portal a session may use follows from it. */
+  const isStaff = computed(() => !!me.value && me.value.role !== 'investor');
+  const isInvestor = computed(() => me.value?.role === 'investor');
   const displayName = computed(() => {
+    if (me.value?.displayName) return me.value.displayName;
     const p = onboarding.value?.profile;
     return p ? `${p.firstName} ${p.lastName}` : (me.value?.phoneNumber ?? '');
   });
@@ -64,9 +69,16 @@ export const useAccountStore = defineStore('account', () => {
   }
 
   async function load(): Promise<void> {
-    const [profile, status] = await Promise.all([accountApi.me(), accountApi.onboarding()]);
+    const profile = await accountApi.me();
     me.value = profile;
-    onboarding.value = status;
+    // Staff have no investor record; asking for one would only be refused.
+    onboarding.value = profile.role === 'investor' ? await accountApi.onboarding() : null;
+  }
+
+  /** Development staff sign-in; production staff use TCB's directory. */
+  async function staffSignIn(username: string, password: string): Promise<void> {
+    accept(await backofficeApi.signIn(username, password));
+    await load();
   }
 
   async function signIn(phoneNumber: string, pin: string): Promise<void> {
@@ -117,10 +129,13 @@ export const useAccountStore = defineStore('account', () => {
     onboarding,
     restored,
     signedIn,
+    isStaff,
+    isInvestor,
     displayName,
     restore,
     load,
     signIn,
+    staffSignIn,
     completeRegistration,
     setPin,
     completePinReset,

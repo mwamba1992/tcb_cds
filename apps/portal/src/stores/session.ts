@@ -1,13 +1,23 @@
 import type { Permission } from '@govsec/auth/roles';
 import { defineStore } from 'pinia';
 import { computed, ref } from 'vue';
-import { permissionsForRole, ROLES } from '@govsec/auth/roles';
+import { isRole, permissionsForRole, ROLES, type Role } from '@govsec/auth/roles';
 import { HAS_INVESTOR, HAS_STAFF, LIVE_AUTH } from '../config/portal';
 import { PERSONAS, type StaffPersona } from '../config/personas';
 import type { SessionUser } from '../api/types';
 import { useAccountStore } from './account';
 
 export type Portal = 'investor' | 'staff';
+
+const ROLE_LABELS: Record<Role, string> = {
+  investor: 'Individual investor',
+  ops_officer: 'Operations · Maker',
+  ops_supervisor: 'Operations · Checker',
+  treasury_officer: 'Treasury · Settlement',
+  compliance_officer: 'Compliance',
+  bot_observer: 'Bank of Tanzania',
+  system_admin: 'ICT administrator',
+};
 
 /**
  * Who is signed in, and to which portal.
@@ -23,17 +33,19 @@ export const useSessionStore = defineStore('session', () => {
   const account = useAccountStore();
 
   const user = computed<SessionUser>(() => {
-    if (portal.value !== 'investor') return PERSONAS[staffPersona.value];
-    if (!LIVE_AUTH) return PERSONAS.investor;
+    if (!LIVE_AUTH) return portal.value === 'investor' ? PERSONAS.investor : PERSONAS[staffPersona.value];
     const name = account.displayName;
     const parts = name.split(' ').filter((p) => /[A-Za-z]/.test(p));
+    const role = account.me && isRole(account.me.role) ? account.me.role : ROLES.investor;
     return {
       id: account.me?.accountId ?? '',
       name,
       initials: `${parts[0]?.charAt(0) ?? ''}${parts.length > 1 ? (parts.at(-1)?.charAt(0) ?? '') : ''}`,
-      role: ROLES.investor,
-      roleLabel: 'Individual investor',
-      permissions: permissionsForRole(ROLES.investor),
+      role,
+      roleLabel: ROLE_LABELS[role],
+      // Nothing is permitted until the session has loaded: a screen must not render
+      // actions for a role the user may not hold.
+      permissions: account.me ? permissionsForRole(role) : [],
     };
   });
 

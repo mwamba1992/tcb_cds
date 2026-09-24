@@ -90,10 +90,14 @@ export class CdsService {
       });
     });
 
-    await this.notifier.send(request.investor.accountId, 'cds.opened', {
-      name: request.investor.individual?.firstName ?? '',
-      cds: cdsAccount,
-    });
-    return { reference, status: 'completed', cdsAccount };
+    // "You can now bid" is only true once the TCB account exists too. For a new-to-bank
+    // investor still waiting for it, the message goes when the account is linked.
+    if (request.investor.bankAccount) {
+      await this.notifier.send(request.investor.accountId, 'cds.opened', {
+        name: request.investor.individual?.firstName ?? '',
+        cds: cdsAccount,
+      });
+    }
+    return { reference, status: 'completed', cdsAccount, canBid: request.investor.bankAccount !== null };
   }
 }

@@ -100,7 +100,10 @@ export class DecisionsService {
 
   /** Records a TCB account opened for a new-to-bank investor (cbs.account.opened). */
   async linkOpenedAccount(input: { investorId: string; customerId: string; accountNumber: string }): Promise<void> {
-    const investor = await this.prisma.investor.findUnique({ where: { id: input.investorId } });
+    const investor = await this.prisma.investor.findUnique({
+      where: { id: input.investorId },
+      include: { individual: true },
+    });
     if (!investor) {
       this.logger.warn(`cbs.account.opened for unknown investor ${input.investorId}; ignored`);
       return;
@@ -122,6 +125,13 @@ export class DecisionsService {
         data: [event(INVESTOR_EVENTS.bankAccountLinked, investor.id, { ...payload }, 'opened')],
       }),
     ]);
+    // The CDS account came first; this was the last thing missing (see CdsService).
+    if (investor.cdsStatus === 'active' && investor.cdsAccount) {
+      await this.notifier.send(investor.accountId, 'cds.opened', {
+        name: investor.individual?.firstName ?? '',
+        cds: investor.cdsAccount,
+      });
+    }
   }
 
   /**

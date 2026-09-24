@@ -16,10 +16,11 @@ const route = useRoute();
 const router = useRouter();
 const account = useAccountStore();
 
-const canSignOut = computed(() => LIVE_AUTH && !isStaff.value && account.signedIn);
+const canSignOut = computed(() => LIVE_AUTH && account.signedIn);
 async function signOut() {
+  const staff = isStaff.value;
   await account.signOut();
-  await router.replace({ name: 'account-sign-in' });
+  await router.replace({ name: staff ? 'staff-sign-in' : 'account-sign-in' });
 }
 
 const isStaff = computed(() => session.portal === 'staff');
@@ -132,7 +133,7 @@ const showPortalSwitch = DEMO && HAS_INVESTOR && HAS_STAFF;
           <h1 class="title">{{ route.meta.title }}</h1>
         </div>
         <div v-if="DEMO" class="demo-controls">
-          <div v-if="isStaff" class="acting">
+          <div v-if="isStaff && !LIVE_AUTH" class="acting">
             <span class="acting-label">Acting as</span>
             <SegmentedControl v-model="personaModel" :options="personaOptions" label="Acting as" />
           </div>

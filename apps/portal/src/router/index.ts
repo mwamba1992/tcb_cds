@@ -45,15 +45,22 @@ const router = createRouter({
 router.beforeEach(async (to) => {
   const session = useSessionStore();
 
-  // Live investor sign-in: every investor screen needs a session, and bidding needs
-  // onboarding finished. The staff side stays on the mocked personas for now.
-  if (LIVE_AUTH && to.meta.portal === 'investor') {
+  // Live sign-in: every screen needs a session of the right kind. An investor session
+  // cannot open the back office, nor a staff session the investor portal; either is
+  // sent to the other portal's sign-in, which replaces the session.
+  if (LIVE_AUTH && to.meta.portal) {
     const account = useAccountStore();
     await account.restore();
+    const staff = to.meta.portal === 'staff';
+    const holds = account.signedIn && (staff ? account.isStaff : account.isInvestor);
+    const signIn = staff ? 'staff-sign-in' : 'account-sign-in';
+    const landing = staff ? 'staff-overview' : 'investor-dashboard';
     if (to.meta.public) {
-      if (account.signedIn) return { name: 'investor-dashboard' };
-    } else if (!account.signedIn) {
-      return { name: 'account-sign-in', query: to.fullPath === '/invest' ? {} : { next: to.fullPath } };
+      if (holds) return { name: landing };
+    } else if (!holds) {
+      const next = to.fullPath === '/invest' || to.fullPath === '/ops' ? {} : { next: to.fullPath };
+      if (session.portal !== to.meta.portal) session.setPortal(to.meta.portal);
+      return { name: signIn, query: next };
     } else if (to.meta.needsBidding && !account.onboarding?.canBid) {
       return { name: 'investor-onboarding' };
     }

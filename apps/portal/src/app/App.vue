@@ -1,19 +1,31 @@
 <script setup lang="ts">
-import { onMounted } from 'vue';
+import { onMounted, watch } from 'vue';
 import { useRoute } from 'vue-router';
 import AppShell from '../components/AppShell.vue';
 import OnboardingBanner from '../components/OnboardingBanner.vue';
-import { HAS_INVESTOR, HAS_STAFF } from '../config/portal';
+import { HAS_INVESTOR, HAS_STAFF, LIVE_AUTH } from '../config/portal';
+import { useAccountStore } from '../stores/account';
 import { useInvestorStore } from '../stores/investor';
 import { useOperationsStore } from '../stores/operations';
 
 const investor = useInvestorStore();
 const ops = useOperationsStore();
 const route = useRoute();
+const account = useAccountStore();
+
+// Live back office: its queues load once a staff member is signed in, and are dropped
+// on sign-out so the next person never sees the previous one's data.
+if (LIVE_AUTH && HAS_STAFF) {
+  watch(
+    () => account.isStaff,
+    (staff) => (staff ? void ops.load() : ops.reset()),
+    { immediate: true },
+  );
+}
 
 onMounted(() => {
   if (HAS_INVESTOR) void investor.load();
-  if (HAS_STAFF) void ops.load();
+  if (HAS_STAFF && !LIVE_AUTH) void ops.load();
 });
 </script>
 

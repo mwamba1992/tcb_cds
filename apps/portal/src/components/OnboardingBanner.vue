@@ -24,6 +24,8 @@ const message = computed(() => {
       return { tone: 'info', text: 'We are verifying your details, usually within one working day. You can look around meanwhile.', action: 'See progress' };
     case 'awaiting_cds':
       return { tone: 'info', text: 'Verified. Your CDS account is being opened; we will send an SMS when you can bid.', action: 'See progress' };
+    case 'awaiting_bank':
+      return { tone: 'info', text: 'Your CDS account is open. We are finishing your TCB account; we will send an SMS when you can bid.', action: 'See progress' };
     case 'rejected':
       return { tone: 'error', text: 'We could not verify your details. Please visit a TCB branch with your NIDA ID.', action: 'Details' };
     default:

@@ -7,6 +7,7 @@ import { useAsync } from '../../composables/useAsync';
 import { useNow } from '../../composables/useNow';
 import { riskTone } from '../../lib/status';
 import { formatAge } from '../../lib/time';
+import { LIVE_AUTH } from '../../config/portal';
 import { useOperationsStore } from '../../stores/operations';
 import { useSessionStore } from '../../stores/session';
 
@@ -23,7 +24,11 @@ watch(
   },
   { immediate: true },
 );
-watch(selectedId, () => (error.value = null));
+const decisionNote = ref('');
+watch(selectedId, () => {
+  error.value = null;
+  decisionNote.value = '';
+});
 
 const selected = computed(() => ops.kyc.find((k) => k.id === selectedId.value) ?? null);
 
@@ -79,7 +84,12 @@ const resultLabel = (result: string) =>
 async function act(action: KycAction) {
   if (!selected.value) return;
   const id = selected.value.id;
-  await run(() => ops.actOnKyc(id, action));
+  const note = decisionNote.value.trim() || undefined;
+  const done = await run(async () => {
+    await ops.actOnKyc(id, action, note);
+    return true;
+  });
+  if (done) decisionNote.value = '';
 }
 </script>
 
@@ -128,7 +138,15 @@ async function act(action: KycAction) {
         <StatusChip :status="selected.status" class="detail-status" />
       </div>
       <div class="detail-body">
-        <p class="exception"><strong>Exception:</strong> {{ selected.reason }}</p>
+        <p v-if="(selected.reasons?.length ?? 0) <= 1" class="exception">
+          <strong>Exception:</strong> {{ selected.reason }}
+        </p>
+        <div v-else class="exception">
+          <strong>Exceptions:</strong>
+          <ul class="reasons">
+            <li v-for="r in selected.reasons" :key="r">{{ r }}</li>
+          </ul>
+        </div>
 
         <div class="compare scroll-x">
           <table class="table table--compact">
@@ -162,6 +180,23 @@ async function act(action: KycAction) {
             }}</span>
           </div>
         </div>
+
+        <div v-if="selected.makerName || selected.checkerName" class="trail">
+          <h3 class="field-label">Decisions</h3>
+          <p v-if="selected.makerName" class="trail-row">
+            <span class="muted">Maker</span> {{ selected.makerName
+            }}<template v-if="selected.makerNote">: “{{ selected.makerNote }}”</template>
+          </p>
+          <p v-if="selected.checkerName" class="trail-row">
+            <span class="muted">Checker</span> {{ selected.checkerName
+            }}<template v-if="selected.checkerNote">: “{{ selected.checkerNote }}”</template>
+          </p>
+        </div>
+
+        <label v-if="LIVE_AUTH && (canMake || canCheck)" class="field">
+          <span class="field-label">Note <span class="muted">(recorded with your decision)</span></span>
+          <textarea v-model="decisionNote" class="input input--text note" rows="2" maxlength="500" />
+        </label>
 
         <div v-if="canMake" class="actions">
           <button type="button" class="btn btn-primary" :disabled="pending" @click="act('approve')">
@@ -338,5 +373,26 @@ async function act(action: KycAction) {
 }
 .notice {
   margin: 0;
+}
+.reasons {
+  margin: 6px 0 0;
+  padding-left: 18px;
+}
+.trail {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+.trail-row {
+  margin: 0;
+  font-size: 14px;
+}
+.trail-row .muted {
+  display: inline-block;
+  width: 64px;
+}
+.note {
+  resize: vertical;
+  font-family: inherit;
 }
 </style>

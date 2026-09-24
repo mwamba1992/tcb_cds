@@ -20,6 +20,7 @@ export type NextStep =
   | 'under_review'
   | 'provide_info'
   | 'awaiting_cds'
+  | 'awaiting_bank'
   | 'ready'
   | 'rejected';
 
@@ -268,7 +269,7 @@ export class OnboardingService {
       reference: investor.reference,
       type: investor.type,
       status: investor.status,
-      nextStep: nextStep(investor.status, investor.cdsStatus, p !== null),
+      nextStep: nextStep(investor.status, investor.cdsStatus, p !== null, investor.bankAccount !== null),
       risk: investor.risk,
       bank: { status: investor.bankStatus, account: investor.bankAccount },
       cds: { status: investor.cdsStatus, account: investor.cdsAccount },
@@ -296,7 +297,7 @@ export class OnboardingService {
   }
 }
 
-export function nextStep(status: string, cdsStatus: string, hasProfile: boolean): NextStep {
+export function nextStep(status: string, cdsStatus: string, hasProfile: boolean, hasBankAccount: boolean): NextStep {
   switch (status) {
     case 'draft':
       return hasProfile ? 'submit' : 'profile';
@@ -307,7 +308,10 @@ export function nextStep(status: string, cdsStatus: string, hasProfile: boolean)
     case 'rejected':
       return 'rejected';
     default:
-      return cdsStatus === 'active' ? 'ready' : 'awaiting_cds';
+      // Bidding needs both: the CDS account the securities go to, and the TCB account
+      // the money comes from. A new-to-bank investor may get the first before the second.
+      if (cdsStatus !== 'active') return 'awaiting_cds';
+      return hasBankAccount ? 'ready' : 'awaiting_bank';
   }
 }
 

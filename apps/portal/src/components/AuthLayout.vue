@@ -2,7 +2,7 @@
 import BrandBars from './BrandBars.vue';
 
 /** Sign-in, registration and PIN reset: the brand panel beside one focused card. */
-defineProps<{ title: string; subtitle?: string }>();
+defineProps<{ title: string; subtitle?: string; audience?: 'investor' | 'staff' }>();
 </script>
 
 <template>
@@ -15,13 +15,23 @@ defineProps<{ title: string; subtitle?: string }>();
       </div>
       <div class="pitch">
         <div class="kicker"><BrandBars />Government Securities</div>
-        <p class="headline">Treasury bills and bonds, bought through TCB.</p>
-        <p class="sub">
-          Bid in Bank of Tanzania auctions from your phone or computer. Funds are held on your
-          TCB account until the auction result is known.
-        </p>
+        <template v-if="audience === 'staff'">
+          <p class="headline">Back-office</p>
+          <p class="sub">
+            KYC review, CDS accounts, bid submission to the Bank of Tanzania and settlement.
+            For TCB staff only; every action is recorded against your name.
+          </p>
+        </template>
+        <template v-else>
+          <p class="headline">Treasury bills and bonds, bought through TCB.</p>
+          <p class="sub">
+            Bid in Bank of Tanzania auctions from your phone or computer. Funds are held on your
+            TCB account until the auction result is known.
+          </p>
+        </template>
       </div>
-      <p class="help">Help: <a href="tel:0800780100">0800 780 100</a> (free)</p>
+      <p v-if="audience === 'staff'" class="help">Access problems: TCB ICT service desk</p>
+      <p v-else class="help">Help: <a href="tel:0800780100">0800 780 100</a> (free)</p>
     </aside>
 
     <main class="side">
