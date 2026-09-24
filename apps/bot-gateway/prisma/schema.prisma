@@ -32,3 +32,48 @@ model OutboxMessage {
   @@index([sentAt, id])
   @@map("outbox_messages")
 }
+
+/// Every callback BoT has sent, exactly once (TAD §7.3).
+///
+/// BoT may deliver the same event more than once. `dedupe_key` is a hash of the signed
+/// body, so a redelivery is recognised, acknowledged again and not processed twice.
+model BotCallback {
+  id             String   @id @default(uuid()) @db.Uuid
+  dedupeKey      String   @unique @map("dedupe_key") @db.VarChar(64)
+  requestId      String?  @map("request_id") @db.VarChar(64)
+  batchReference String?  @map("batch_reference") @db.VarChar(32)
+  isin           String?  @db.VarChar(12)
+  status         String?  @db.VarChar(40)
+  message        String?
+  payload        Json
+  receivedAt     DateTime @default(now()) @map("received_at") @db.Timestamptz(6)
+
+  @@index([requestId])
+  @@index([batchReference])
+  @@map("bot_callbacks")
+}
+
+/// The last version of each auction seen on GET /auctions, so a poll can tell a new
+/// auction from a changed one from an unchanged one.
+model AuctionSnapshot {
+  isin        String   @id @db.VarChar(12)
+  hash        String   @db.VarChar(64)
+  payload     Json
+  firstSeenAt DateTime @default(now()) @map("first_seen_at") @db.Timestamptz(6)
+  updatedAt   DateTime @updatedAt @map("updated_at") @db.Timestamptz(6)
+
+  @@map("auction_snapshots")
+}
+
+/// One row per batch sent to BoT: the audit record of what was submitted, by whom and
+/// when. The batch reference is BoT's idempotency key, so it is the primary key here.
+model BatchSubmission {
+  batchReference   String   @id @map("batch_reference") @db.VarChar(32)
+  requestedBy      String   @map("requested_by") @db.VarChar(40)
+  bidsSubmitted    Int      @map("bids_submitted")
+  totalFaceValue   Decimal  @map("total_face_value") @db.Decimal(20, 2)
+  alreadySubmitted Boolean  @map("already_submitted")
+  submittedAt      DateTime @default(now()) @map("submitted_at") @db.Timestamptz(6)
+
+  @@map("batch_submissions")
+}

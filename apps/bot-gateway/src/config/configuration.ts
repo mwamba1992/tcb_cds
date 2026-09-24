@@ -31,6 +31,8 @@ export interface BotGatewayConfig {
     privateKeyPath?: string;
     /** BoT's public key, for verifying callbacks. */
     botPublicKeyPath?: string;
+    /** How often to poll GET /auctions, in ms; 0 disables the sync. */
+    auctionSyncMs: number;
   };
 }
 
@@ -93,6 +95,7 @@ export function loadConfig(): BotGatewayConfig {
       participantCode: optional('BOT_PARTICIPANT_CODE'),
       privateKeyPath: optional('BOT_PRIVATE_KEY_PATH'),
       botPublicKeyPath: optional('BOT_PUBLIC_KEY_PATH'),
+      auctionSyncMs: optionalNumber('BOT_AUCTION_SYNC_MS', 300_000),
     },
   };
 

@@ -4,7 +4,18 @@ import { APP_GUARD, Reflector } from '@nestjs/core';
 import { GovsecAuthModule, ServiceAuthGuard } from '@govsec/auth';
 import { DEAD_LETTER_EXCHANGE, EXCHANGES } from '@govsec/events';
 import { OutboxRelay, OUTBOX_OPTIONS, OUTBOX_STORE } from '@govsec/outbox';
+import { readFileSync } from 'node:fs';
+import { AuctionSyncScheduler } from '../auctions/auction-sync.scheduler';
+import { AuctionSyncService } from '../auctions/auction-sync.service';
+import { PrismaSnapshotStore } from '../auctions/prisma-snapshot.store';
+import { BatchController } from '../batches/batch.controller';
+import { BatchSubmissionService } from '../batches/batch-submission.service';
+import { PrismaSubmissionStore } from '../batches/prisma-submission.store';
 import { botServiceProvider } from '../bot/bot.providers';
+import { BotService } from '../bot/bot.service';
+import { CallbackController } from '../callbacks/callback.controller';
+import { CallbackService } from '../callbacks/callback.service';
+import { PrismaCallbackStore } from '../callbacks/prisma-callback.store';
 import { BotGatewayConfigModule } from '../config/config.module';
 import { CONFIG, loadConfig, type BotGatewayConfig } from '../config/configuration';
 import { HealthController } from '../health/health.controller';
@@ -12,6 +23,16 @@ import { BotGatewayOutboxStore } from '../outbox/outbox.store';
 import { PrismaModule } from '../prisma/prisma.module';
 
 const bootConfig = loadConfig();
+
+/** BoT's public key for callbacks; absent in development without keys (callbacks then 503). */
+function readBotPublicKey(path: string | undefined): string | null {
+  if (!path) return null;
+  try {
+    return readFileSync(path, 'utf8');
+  } catch {
+    return null;
+  }
+}
 
 @Module({
   imports: [
@@ -37,7 +58,7 @@ const bootConfig = loadConfig();
       inject: [CONFIG],
     }),
   ],
-  controllers: [HealthController],
+  controllers: [HealthController, CallbackController, BatchController],
   providers: [
     {
       provide: APP_GUARD,
@@ -49,6 +70,28 @@ const bootConfig = loadConfig();
       inject: [Reflector],
     },
     botServiceProvider,
+    PrismaCallbackStore,
+    {
+      provide: CallbackService,
+      useFactory: (store: PrismaCallbackStore, config: BotGatewayConfig) =>
+        new CallbackService(store, readBotPublicKey(config.bot.botPublicKeyPath)),
+      inject: [PrismaCallbackStore, CONFIG],
+    },
+    PrismaSnapshotStore,
+    {
+      provide: AuctionSyncService,
+      useFactory: (bot: BotService, store: PrismaSnapshotStore) =>
+        new AuctionSyncService(bot, store),
+      inject: [BotService, PrismaSnapshotStore],
+    },
+    AuctionSyncScheduler,
+    PrismaSubmissionStore,
+    {
+      provide: BatchSubmissionService,
+      useFactory: (bot: BotService, store: PrismaSubmissionStore) =>
+        new BatchSubmissionService(bot, store),
+      inject: [BotService, PrismaSubmissionStore],
+    },
     BotGatewayOutboxStore,
     { provide: OUTBOX_STORE, useExisting: BotGatewayOutboxStore },
     {

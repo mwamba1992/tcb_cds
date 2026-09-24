@@ -205,7 +205,8 @@ export class BotSimulator {
         {
           status: success ? 'allotted' : 'unsuccessful',
           allottedAmount: bid.allottedAmount,
-          allottedPrice: fromHundredths(bid.allottedPriceHundredths),
+          // A JSON number, as in the spec's callback sample (B12).
+          allottedPrice: bid.allottedPriceHundredths / 100,
           action: success ? 'approve' : 'reject',
         },
         `Bid batch ${bid.batchReference} processing completed successfully`,
@@ -683,10 +684,6 @@ export class BotSimulator {
 function toHundredths(price: string): number {
   const [whole = '0', fraction = ''] = price.split('.');
   return Number(whole) * 100 + Number(fraction.padEnd(2, '0'));
-}
-
-function fromHundredths(value: number): string {
-  return `${Math.floor(value / 100)}.${String(value % 100).padStart(2, '0')}`;
 }
 
 function parseJson(raw: string): unknown {

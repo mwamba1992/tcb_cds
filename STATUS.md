@@ -1,6 +1,6 @@
 # GovSec — Project Status
 
-**Last updated:** 2026-09-23 · **Current milestone:** M0 (workspace) · **Next:** BoT sandbox connection in bot-gateway
+**Last updated:** 2026-09-24 · **Current milestone:** M0 → M1 · **Next:** auction service bidding endpoints
 
 ## At a glance
 
@@ -45,10 +45,22 @@ Every service builds, boots, connects to its own schema and to RabbitMQ, and ans
 | Settlement mechanism to BoT (TISS aggregate vs GePG)                                                                            | TCB Treasury + BoT | M3                    |
 | Production hosting target (Kubernetes/OpenShift or VMs)                                                                         | TCB ICT            | Deployment packaging  |
 
-## Next up (M0 → M1)
+## bot-gateway (done against the simulator)
 
-1. `bot-gateway`: token manager for `POST /api/auth`, a signed HTTP client using
-   `@govsec/bot-client`, `GET /auctions` against the sandbox, and a callback receiver
-   with raw-body signature verification.
-2. `auction`: catalogue model and migration; consume `bot.auction.*` events.
-3. `identity`: port investor OTP/PIN and staff sign-in from sokohub.
+- Signed client for every BoT endpoint, with token renewal, retries and typed errors.
+- `POST /bot/callback`: BoT's signature is checked against the raw body; each callback
+  is stored exactly once, and a redelivery is only acknowledged again.
+- Auction sync every 5 minutes; `bot.auction.published` / `.updated` only on change.
+- `POST /internal/v1/batches/{ref}`: batch submission, callable by the auction service
+  only, idempotent on the batch reference.
+- Events on `govsec.bot`: auction published/updated, batch submitted, bid
+  accepted/rejected/allotted/unsuccessful.
+- Proven live: submission, replay, a refused caller, a refused forged callback, an
+  auction close with 6 signed callbacks, and 10 events published to RabbitMQ.
+
+## Next up
+
+1. `auction`: the bidding endpoints the portal already expects (place, withdraw,
+   batches, maker-checker), and consumers of the `bot.*` events.
+2. `cbs-gateway`: stub funds holds, so bids hold real (simulated) money.
+3. Replace the portal's mock API with the auction endpoints as they land.

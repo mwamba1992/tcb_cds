@@ -45,6 +45,8 @@ apps/
   cbs-gateway/     TCB Core Banking             :3105   TAD §7.2
   settlement/      Holds, settlement, recon     :3106   TAD §5.4, §7.4
   notification/    SMS, email, push             :3107   TAD §4.2
+  bot-simulator/   Fake BoT GSS API (dev only)  :3199
+  portal/          Vue investor + back-office   :4400
     prisma/        schema + migrations; each service owns one Postgres schema
 libs/
   money/           Money as bigint minor units. Never a float.
@@ -56,6 +58,7 @@ libs/
   reference/       Human-readable, checksummed references (BD-, ST-, PY-, …)
   pagination/      Keyset pagination contract
   bot-client/      BoT signing, wire types, batch references, amount conversion
+  bot-simulator/   Local stand-in for BoT's GSS API (development and tests only)
 ```
 
 ### The BoT boundary
@@ -87,6 +90,29 @@ done
 
 npx nx serve auction           # http://localhost:3103/docs for Swagger
 ```
+
+## Working with BoT locally
+
+BoT has not issued sandbox credentials yet, so development runs against a simulator of
+its GSS API (`libs/bot-simulator`). It follows BOT-SPEC-GSS-2026-v1.0, gaps included: auctions
+carry no cut-off time (B4), there is no cancel endpoint (B3), and `/winners` does not say
+whose allotment is whose (B1). Allotments are therefore matched to our bids by the
+`requestId` in BoT's callbacks.
+
+```bash
+./scripts/dev-bot-keys.sh        # once: RSA keys for TCB and the simulator, into secrets/
+npx nx serve bot-simulator       # fake BoT on :3199
+npx nx serve bot-gateway         # signs in, syncs auctions, receives callbacks
+
+# Run an auction and watch the callbacks arrive:
+curl -X POST localhost:3199/_sim/close -H 'content-type: application/json' \
+     -d '{"isin":"TZ1996104321","cutoffPrice":"88.00"}'
+curl localhost:3199/_sim/state
+```
+
+When BoT issues sandbox credentials: put TCB's key pair and BoT's public key in the
+paths `.env` names, set the `BOT_*` values BoT issues, and remove `BOT_BASE_URL`.
+No code changes.
 
 ## Everyday commands
 
