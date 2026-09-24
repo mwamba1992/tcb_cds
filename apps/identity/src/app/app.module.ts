@@ -5,6 +5,9 @@ import { GovsecAuthModule, ServiceAuthGuard } from '@govsec/auth';
 import { DEAD_LETTER_EXCHANGE, EXCHANGES } from '@govsec/events';
 import { NotifyClient } from '@govsec/notify';
 import { OutboxRelay, OUTBOX_OPTIONS, OUTBOX_STORE } from '@govsec/outbox';
+import { CustomerLoginsController, StaffAdminController } from '../admin/admin.controller';
+import { CustomerLoginsService } from '../admin/customer-logins.service';
+import { StaffAdminService } from '../admin/staff-admin.service';
 import { AuthController } from '../auth/auth.controller';
 import { AuthService } from '../auth/auth.service';
 import { InternalController } from '../auth/internal.controller';
@@ -47,7 +50,7 @@ const bootConfig = loadConfig();
       inject: [CONFIG],
     }),
   ],
-  controllers: [HealthController, AuthController, InternalController],
+  controllers: [HealthController, AuthController, InternalController, StaffAdminController, CustomerLoginsController],
   providers: [
     SecretHasher,
     TokenService,
@@ -57,6 +60,8 @@ const bootConfig = loadConfig();
     AuthService,
     StepUpService,
     StaffAuthService,
+    StaffAdminService,
+    CustomerLoginsService,
     {
       provide: NotifyClient,
       useFactory: (config: IdentityConfig) =>

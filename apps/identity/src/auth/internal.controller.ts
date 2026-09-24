@@ -1,9 +1,16 @@
 import { Body, Controller, Get, HttpCode, HttpStatus, NotFoundException, Param, ParseUUIDPipe, Post } from '@nestjs/common';
 import { ApiExcludeController } from '@nestjs/swagger';
-import { IsIn, IsOptional, IsString, IsUUID, Matches } from 'class-validator';
+import { IsIn, IsOptional, IsString, IsUUID, Length, Matches } from 'class-validator';
 import { InternalOnly, Public, STEP_UP_REQUIRED, type Permission } from '@govsec/auth';
 import { PrismaService } from '../prisma/prisma.service';
+import { normalisePhone } from './phone';
 import { StepUpService } from './step-up.service';
+
+class ByPhoneDto {
+  @IsString()
+  @Length(9, 20)
+  phoneNumber!: string;
+}
 
 class RedeemStepUpDto {
   @IsUUID()
@@ -50,6 +57,22 @@ export class InternalController {
     // Staff accounts may have no phone; for a caller that means nowhere to send.
     if (!account?.phoneNumber) throw new NotFoundException('Account not found');
     return { accountId: account.id, phoneNumber: account.phoneNumber, locale: account.locale };
+  }
+
+  /**
+   * The account behind a phone number, so the back office can find a customer by the
+   * number they call from. POST, so the number stays out of access logs.
+   */
+  @Public()
+  @InternalOnly('investor')
+  @Post('accounts/by-phone')
+  @HttpCode(HttpStatus.OK)
+  async byPhone(@Body() dto: ByPhoneDto) {
+    const phoneNumber = normalisePhone(dto.phoneNumber);
+    const account = phoneNumber
+      ? await this.prisma.account.findUnique({ where: { phoneNumber }, select: { id: true } })
+      : null;
+    return { accountId: account?.id ?? null };
   }
 
   /** Spend a PIN approval, as the action it authorised commits. */

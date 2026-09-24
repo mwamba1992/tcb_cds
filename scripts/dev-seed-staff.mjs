@@ -24,6 +24,7 @@ const STAFF = [
   { username: 'salum.kweka', displayName: 'Salum Kweka', role: 'ops_supervisor' },
   { username: 'neema.lyimo', displayName: 'Neema Lyimo', role: 'compliance_officer' },
   { username: 'faraji.mrema', displayName: 'Faraji Mrema', role: 'treasury_officer' },
+  { username: 'amani.ict', displayName: 'Amani Shayo', role: 'system_admin' },
 ];
 
 const url = new URL(process.env.IDENTITY_DATABASE_URL);

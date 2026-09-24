@@ -1,6 +1,6 @@
 import { ApiPropertyOptional } from '@nestjs/swagger';
 import { Type } from 'class-transformer';
-import { IsInt, IsISO8601, IsOptional, Max, Min } from 'class-validator';
+import { IsIn, IsInt, IsISO8601, IsOptional, IsString, Length, Matches, Max, Min } from 'class-validator';
 
 /**
  * One pagination contract, for every list endpoint on the platform.
@@ -97,4 +97,81 @@ export function page<T>(
   if (last === undefined) return { next_before: null };
   const value = cursorOf(last);
   return { next_before: value instanceof Date ? value.toISOString() : value };
+}
+
+// ---------------------------------------------------------------- back-office tables
+
+/**
+ * Numbered pages with a total, for back-office tables only.
+ *
+ * Staff need what keyset paging cannot give: "312 customers", "page 3 of 13", jump to
+ * a page. Back-office lists run to thousands of rows, not millions, so the cost of an
+ * offset is small, and every table sorts with a unique tiebreaker so rows cannot swap
+ * between pages. Feeds that customers scroll, and anything unbounded (events, audit
+ * trails, callbacks), stay on keyset paging above.
+ *
+ * One shape everywhere: `?page=1&pageSize=25&q=…&sort=field:asc` in, `TablePage` out.
+ */
+export const TABLE_PAGE_SIZES = [25, 50, 100] as const;
+export const TABLE_PAGE_DEFAULT = 25;
+
+export class TableQuery {
+  @ApiPropertyOptional({ default: 1, minimum: 1 })
+  @IsOptional()
+  @Type(() => Number)
+  @IsInt()
+  @Min(1)
+  @Max(100_000)
+  page?: number;
+
+  @ApiPropertyOptional({ default: TABLE_PAGE_DEFAULT, enum: TABLE_PAGE_SIZES })
+  @IsOptional()
+  @Type(() => Number)
+  @IsInt()
+  @IsIn([...TABLE_PAGE_SIZES])
+  pageSize?: number;
+
+  @ApiPropertyOptional({ description: 'Free-text search; each table says what it matches' })
+  @IsOptional()
+  @IsString()
+  @Length(1, 60)
+  q?: string;
+
+  @ApiPropertyOptional({ description: 'field:asc or field:desc; each table lists its fields' })
+  @IsOptional()
+  @Matches(/^[a-zA-Z]+:(asc|desc)$/, { message: 'sort must look like createdAt:desc' })
+  sort?: string;
+}
+
+export interface TablePage<T> {
+  items: T[];
+  total: number;
+  page: number;
+  pageSize: number;
+}
+
+/** skip/take for a TableQuery, with defaults applied. */
+export function tableWindow(query: TableQuery): { skip: number; take: number; page: number; pageSize: number } {
+  const pageSize = query.pageSize ?? TABLE_PAGE_DEFAULT;
+  const page = query.page ?? 1;
+  return { skip: (page - 1) * pageSize, take: pageSize, page, pageSize };
+}
+
+/**
+ * Resolve `sort` against the fields a table allows, falling back to its default.
+ * Always appends `id` as the tiebreaker.
+ */
+export function tableOrder<F extends string>(
+  sort: string | undefined,
+  allowed: Record<F, string>,
+  fallback: { field: NoInfer<F>; dir: 'asc' | 'desc' },
+): Record<string, 'asc' | 'desc'>[] {
+  const [field, dir] = (sort ?? '').split(':') as [string, 'asc' | 'desc' | undefined];
+  const column = field && field in allowed ? allowed[field as F] : allowed[fallback.field];
+  const direction = field && field in allowed && dir ? dir : fallback.dir;
+  return [{ [column]: direction }, { id: direction }];
+}
+
+export function tablePage<T>(items: T[], total: number, window: { page: number; pageSize: number }): TablePage<T> {
+  return { items, total, page: window.page, pageSize: window.pageSize };
 }

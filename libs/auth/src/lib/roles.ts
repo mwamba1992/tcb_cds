@@ -48,6 +48,13 @@ export const PERMISSIONS = {
   kycDecide: 'kyc:decide',
   /** Record the CDS account opened for an approved investor. */
   cdsOpen: 'cds:open',
+  /** See customers, their accounts and history. Personal data: not for oversight roles. */
+  investorRead: 'investor:read',
+  // customer sign-in support — unlocking is maker-checker, signing out is not
+  customerLoginRead: 'customer_login:read',
+  customerLoginSignOut: 'customer_login:sign_out',
+  customerLoginUnlockRequest: 'customer_login:unlock:request',
+  customerLoginUnlockApprove: 'customer_login:unlock:approve',
   // auction operations — maker and checker are separate permissions on purpose
   auctionManage: 'auction:manage',
   bidReadAll: 'bid:read:all',
@@ -81,6 +88,10 @@ const OPS_OFFICER_PERMISSIONS: readonly Permission[] = [
   PERMISSIONS.bidReadAll,
   PERMISSIONS.kycReview,
   PERMISSIONS.cdsOpen,
+  PERMISSIONS.investorRead,
+  PERMISSIONS.customerLoginRead,
+  PERMISSIONS.customerLoginSignOut,
+  PERMISSIONS.customerLoginUnlockRequest,
   PERMISSIONS.auctionManage,
   PERMISSIONS.batchPrepare,
   PERMISSIONS.reportRead,
@@ -92,6 +103,10 @@ const OPS_OFFICER_PERMISSIONS: readonly Permission[] = [
  * apart means a single role can never complete a BoT submission on its own.
  */
 const OPS_SUPERVISOR_PERMISSIONS: readonly Permission[] = [
+  PERMISSIONS.investorRead,
+  PERMISSIONS.customerLoginRead,
+  PERMISSIONS.customerLoginSignOut,
+  PERMISSIONS.customerLoginUnlockApprove,
   PERMISSIONS.auctionRead,
   PERMISSIONS.bidReadAll,
   PERMISSIONS.kycReview,
@@ -101,6 +116,7 @@ const OPS_SUPERVISOR_PERMISSIONS: readonly Permission[] = [
 ];
 
 const TREASURY_PERMISSIONS: readonly Permission[] = [
+  PERMISSIONS.investorRead,
   PERMISSIONS.auctionRead,
   PERMISSIONS.bidReadAll,
   PERMISSIONS.settlementRead,
@@ -110,6 +126,8 @@ const TREASURY_PERMISSIONS: readonly Permission[] = [
 ];
 
 const COMPLIANCE_PERMISSIONS: readonly Permission[] = [
+  PERMISSIONS.investorRead,
+  PERMISSIONS.customerLoginRead,
   PERMISSIONS.kycReview,
   PERMISSIONS.kycDecide,
   PERMISSIONS.bidReadAll,

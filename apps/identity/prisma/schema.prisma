@@ -126,3 +126,45 @@ model StepUpGrant {
   @@index([accountId])
   @@map("step_up_grants")
 }
+
+/// A request to lift a customer's PIN lockout, made by an officer who has verified
+/// the caller, and decided by a different supervisor. Unlocking hands the account
+/// back to whoever knows the PIN, so it takes two people.
+model UnlockRequest {
+  id              String    @id @default(uuid()) @db.Uuid
+  accountId       String    @map("account_id") @db.Uuid
+  requestedBy     String    @map("requested_by") @db.Uuid
+  requestedByName String?   @map("requested_by_name") @db.VarChar(120)
+  /// How the caller was verified, and why.
+  reason          String    @db.VarChar(500)
+  /// pending | approved | rejected
+  status          String    @default("pending") @db.VarChar(10)
+  decidedBy       String?   @map("decided_by") @db.Uuid
+  decidedByName   String?   @map("decided_by_name") @db.VarChar(120)
+  note            String?   @db.VarChar(500)
+  createdAt       DateTime  @default(now()) @map("created_at") @db.Timestamptz(6)
+  decidedAt       DateTime? @map("decided_at") @db.Timestamptz(6)
+
+  @@index([status, createdAt])
+  @@index([accountId])
+  @@map("unlock_requests")
+}
+
+/// Every administrative action on an account, append-only: staff changes, customer
+/// sign-in support, and views of customer sign-in details.
+model AdminAction {
+  id        BigInt   @id @default(autoincrement())
+  actorId   String   @map("actor_id") @db.Uuid
+  actorName String?  @map("actor_name") @db.VarChar(120)
+  actorRole String   @map("actor_role") @db.VarChar(40)
+  /// e.g. staff.create, staff.role, staff.disable, customer.sign_out, customer.unlock.approve
+  action    String   @db.VarChar(40)
+  targetId  String   @map("target_id") @db.Uuid
+  detail    String?  @db.VarChar(200)
+  reason    String?  @db.VarChar(500)
+  at        DateTime @default(now()) @db.Timestamptz(6)
+
+  @@index([targetId, at])
+  @@index([actorId, at])
+  @@map("admin_actions")
+}

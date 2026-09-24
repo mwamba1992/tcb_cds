@@ -33,6 +33,25 @@ describe('RBAC', () => {
     });
   });
 
+  describe('customer data and sign-in support', () => {
+    it('never lets one role both request and approve a customer unlock', () => {
+      for (const role of ALL_ROLES) {
+        const held = permissionsForRole(role);
+        const both =
+          held.includes(PERMISSIONS.customerLoginUnlockRequest) &&
+          held.includes(PERMISSIONS.customerLoginUnlockApprove);
+        expect({ role, both }).toEqual({ role, both: false });
+      }
+    });
+
+    it('keeps customer personal data from the BoT observer and the ICT admin', () => {
+      for (const role of [ROLES.botObserver, ROLES.systemAdmin, ROLES.investor]) {
+        expect(permissionsForRole(role)).not.toContain(PERMISSIONS.investorRead);
+        expect(permissionsForRole(role)).not.toContain(PERMISSIONS.customerLoginRead);
+      }
+    });
+  });
+
   describe('separation of duties', () => {
     it('gives an investor what they need to bid and nothing operational', () => {
       const investor = permissionsForRole(ROLES.investor);
