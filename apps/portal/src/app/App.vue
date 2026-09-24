@@ -23,8 +23,20 @@ if (LIVE_AUTH && HAS_STAFF) {
   );
 }
 
+// Live investor portal: load once an investor is signed in, and again as their
+// onboarding moves on (a CDS account arriving makes them able to bid).
+if (LIVE_AUTH && HAS_INVESTOR) {
+  watch(
+    () => [account.isInvestor, account.onboarding?.canBid] as const,
+    ([investorSignedIn]) => {
+      if (investorSignedIn) void investor.load();
+    },
+    { immediate: true },
+  );
+}
+
 onMounted(() => {
-  if (HAS_INVESTOR) void investor.load();
+  if (HAS_INVESTOR && !LIVE_AUTH) void investor.load();
   if (HAS_STAFF && !LIVE_AUTH) void ops.load();
 });
 </script>

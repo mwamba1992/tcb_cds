@@ -154,12 +154,20 @@ const onHoldNote = computed(() => {
               <td class="right num">{{ h.yield }}%</td>
               <td>{{ formatDate(h.maturityDate) }}</td>
             </tr>
+            <tr v-if="store.holdings.length === 0">
+              <td colspan="4" class="empty-row muted">
+                No securities yet. Allotted bids appear here once they settle into your CDS account.
+              </td>
+            </tr>
           </tbody>
         </table>
       </section>
 
       <section class="card payments" aria-labelledby="payments-title">
         <h2 id="payments-title" class="card-head">Upcoming payments</h2>
+        <p v-if="store.cashflows.length === 0" class="empty-row muted">
+          Interest and maturity payments will be listed here.
+        </p>
         <div v-for="c in store.cashflows" :key="`${c.kind}-${c.date}`" class="payment">
           <div>
             <div class="payment-kind">{{ c.kind }}</div>
@@ -344,5 +352,11 @@ const onHoldNote = computed(() => {
 .payments-note {
   padding: 12px 20px;
   font-size: 12px;
+}
+.empty-row {
+  padding: 20px;
+  font-size: 13px;
+  text-align: center;
+  margin: 0;
 }
 </style>

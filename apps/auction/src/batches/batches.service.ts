@@ -54,7 +54,10 @@ export class BatchesService {
         competitive: live.filter((b) => b.competitive).length,
         nonCompetitive: live.filter((b) => !b.competitive).length,
         faceValue: live.reduce((s, b) => s + b.faceValue, 0n).toString(),
-        held: tzs(live.reduce((s, b) => s + b.heldMinor, 0n)),
+        // Only holds still in place: unsuccessful and rejected bids have been released.
+        held: tzs(
+          live.filter((b) => !['unsuccessful', 'rejected'].includes(b.status)).reduce((s, b) => s + b.heldMinor, 0n),
+        ),
         awaitingBatch: waiting.length,
         batch: batch && {
           id: batch.id,

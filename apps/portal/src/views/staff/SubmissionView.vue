@@ -2,6 +2,10 @@
 import { PERMISSIONS } from '@govsec/auth/roles';
 import { computed, ref } from 'vue';
 import type { Batch, BatchStage } from '../../api';
+import type { LiveBatch } from '../../api/live/bidding';
+import ReasonDialog from '../../components/ReasonDialog.vue';
+import { LIVE_AUTH } from '../../config/portal';
+import { formatCutoff } from '../../lib/time';
 import { useAsync } from '../../composables/useAsync';
 import { useNow } from '../../composables/useNow';
 import { formatAmount, formatCompact } from '../../lib/money';
@@ -48,7 +52,12 @@ function steps(b: Batch) {
   }));
 }
 
+type Dialog = { kind: 'close'; isin: string; name: string } | { kind: 'approve'; batchId: string; name: string };
+const dialog = ref<Dialog | null>(null);
+const live = (b: Batch) => b as LiveBatch;
+
 function action(b: Batch): { label: string; run: () => Promise<void> } | null {
+  if (LIVE_AUTH) return liveAction(live(b));
   if (b.stage === 'Awaiting maker' && session.can(PERMISSIONS.batchPrepare)) {
     return { label: 'Prepare submission', run: () => ops.prepareBatch(b.id) };
   }
@@ -62,7 +71,54 @@ function action(b: Batch): { label: string; run: () => Promise<void> } | null {
   return null;
 }
 
+/**
+ * Live: the next step for this auction. Approval opens a password confirmation; closing
+ * bidding early asks for a reason. Maker-checker is also enforced by the server.
+ */
+function liveAction(b: LiveBatch): { label: string; run: () => Promise<void> } | null {
+  const mine = b.preparedBy?.name === session.user.name;
+  switch (b.stage) {
+    case 'Awaiting consolidation':
+      return session.can(PERMISSIONS.auctionManage)
+        ? { label: 'Close bidding now', run: async () => void (dialog.value = { kind: 'close', isin: b.isin, name: b.name }) }
+        : null;
+    case 'Awaiting maker':
+      return session.can(PERMISSIONS.batchPrepare) ? { label: 'Prepare submission', run: () => ops.prepareBatch(b.isin) } : null;
+    case 'Awaiting checker':
+      return session.can(PERMISSIONS.batchApprove) && !mine && b.batchId
+        ? { label: 'Approve and submit to BoT', run: async () => void (dialog.value = { kind: 'approve', batchId: b.batchId ?? '', name: b.name }) }
+        : null;
+    case 'Submitting':
+      return b.failed && b.batchId && session.can(PERMISSIONS.batchApprove)
+        ? { label: 'Send again', run: () => ops.resubmitBatch(b.batchId ?? '') }
+        : null;
+    default:
+      return null;
+  }
+}
+
+function liveNote(b: LiveBatch): string {
+  switch (b.stage) {
+    case 'Awaiting consolidation':
+      return `Bidding open until ${formatCutoff(b.cutoffAt)}, three hours before BoT closes.`;
+    case 'Awaiting maker':
+      return session.can(PERMISSIONS.batchPrepare)
+        ? 'Bidding has closed. Prepare the batch and send it for approval.'
+        : 'Waiting for a maker to prepare this batch.';
+    case 'Awaiting checker':
+      if (b.preparedBy?.name === session.user.name) return 'Prepared by you. A different user must approve it.';
+      return session.can(PERMISSIONS.batchApprove)
+        ? `Prepared by ${b.preparedBy?.name}. Approving sends the batch to the Bank of Tanzania; you confirm with your password.`
+        : 'Waiting for a checker to approve this batch.';
+    case 'Submitting':
+      return b.failed ? `Not sent: ${b.lastError ?? 'BoT could not be reached'}. Send it again.` : 'Sending to BoT…';
+    default:
+      return 'Sent to BoT. Results arrive by callback; each investor is told by SMS and their funds adjusted.';
+  }
+}
+
 function note(b: Batch): string {
+  if (LIVE_AUTH) return liveNote(live(b));
   switch (b.stage) {
     case 'Awaiting consolidation':
       return 'Bids are consolidated automatically at 09:00 on auction day.';
@@ -117,11 +173,16 @@ async function perform(b: { id: string; action: { run: () => Promise<void> } | n
 </script>
 
 <template>
-  <p class="lead">
+  <p v-if="LIVE_AUTH" class="lead">
+    TCB stops taking bids three hours before the Bank of Tanzania closes. A maker then prepares the
+    batch, a different checker approves it, and approval sends it to BoT.
+  </p>
+  <p v-else class="lead">
     Bids are consolidated per ISIN at 09:00 on auction day. A maker prepares the batch, a different
     checker approves it, and the platform submits it to the BoT Auction API and stores the
     acknowledgement.
   </p>
+  <p v-if="LIVE_AUTH && ops.loaded && batches.length === 0" class="notice">No auctions with bids.</p>
   <p v-if="error" class="notice notice--error" role="alert">{{ error }}</p>
 
   <section v-for="b in batches" :key="b.id" class="card" :aria-labelledby="`batch-${b.id}`">
@@ -130,7 +191,7 @@ async function perform(b: { id: string; action: { run: () => Promise<void> } | n
         <h2 :id="`batch-${b.id}`" class="card-title">{{ b.name }}</h2>
         <div class="card-sub">
           <span class="mono">{{ b.isin }}</span> ·
-          {{ b.batchReference ? `Batch ${b.batchReference}` : `Batch ${b.id}` }}
+          {{ b.batchReference ? `Batch ${b.batchReference}` : LIVE_AUTH ? 'Not yet submitted' : `Batch ${b.id}` }}
         </div>
       </div>
       <div class="cutoff">
@@ -175,6 +236,27 @@ async function perform(b: { id: string; action: { run: () => Promise<void> } | n
       </button>
     </div>
   </section>
+
+  <ReasonDialog
+    :open="dialog?.kind === 'close'"
+    :title="`Close bidding: ${dialog?.name ?? ''}`"
+    description="Investors can no longer bid, amend or withdraw on this auction. Use this to submit ahead of TCB's normal cut-off."
+    confirm-label="Close bidding"
+    tone="danger"
+    :action="(reason: string) => ops.closeBidding(dialog?.kind === 'close' ? dialog.isin : '', reason)"
+    @close="dialog = null"
+  />
+  <ReasonDialog
+    :open="dialog?.kind === 'approve'"
+    :title="`Approve and submit: ${dialog?.name ?? ''}`"
+    description="This sends the batch to the Bank of Tanzania. Confirm with your password."
+    confirm-label="Approve and submit"
+    tone="success"
+    reason-label="Your password"
+    secret
+    :action="(password: string) => ops.approveBatch(dialog?.kind === 'approve' ? dialog.batchId : '', password)"
+    @close="dialog = null"
+  />
 </template>
 
 <style scoped>

@@ -1,6 +1,6 @@
 # GovSec — Project Status
 
-**Last updated:** 2026-09-24 · **Current milestone:** M0 → M1 · **Next:** to be agreed (candidates: auction service bidding on real data; investor dashboard on real data)
+**Last updated:** 2026-09-24 · **Current milestone:** M0 → M1 · **Next:** settlement: debit allotted amounts at Core Banking and credit CDS holdings; holdings on the dashboard
 
 ## At a glance
 
@@ -65,6 +65,27 @@ Every service builds, boots, connects to its own schema and to RabbitMQ, and ans
   suspicious. No phone numbers or credentials in any payload.
 - Development: `OTP_FIXED_CODE=123456` (refused in production).
 - Not yet: staff sign-in (next round, with the back-office KYC screen), device binding.
+
+## bidding (auctions, bids, batches to BoT)
+
+- Auction catalogue from bot-gateway (events, plus a start-up load from its new
+  `GET /internal/v1/auctions`). TCB cut-off = BoT close (`BOT_AUCTION_CLOSE_TIME`,
+  10:00 EAT until BoT confirms, B4) less `TCB_CUTOFF_HOURS_BEFORE_BOT` = 3.
+  Commission `BID_COMMISSION_BPS` = 0 per TCB.
+- Bids: PIN approval covering the held amount (spent once), funds held on the TCB
+  account through cbs-gateway (Core Banking stub), `Idempotency-Key` retries return
+  the same bid. Competitive holds face × price; non-competitive holds face value.
+  Amend and withdraw until cut-off; the hold follows.
+- Batches: officer prepares after cut-off (staff may close bidding early, with a
+  reason); a different supervisor approves with a fresh approval (development:
+  password) and approval sends it via bot-gateway; failed sends can be retried.
+- Results: BoT outcomes stored and applied once reconciliation maps BoT's
+  requestId to our bid, in either order. Unsuccessful/rejected release the hold;
+  allotted keeps exactly the cost for settlement. SMS on placing and on result.
+- Portal on real data: Auctions, Place bid (PIN), My bids, dashboard balances; Bid
+  submission (close bidding, prepare, approve with password, send again).
+- Proven live: 5 bids from 4 investors, 2 batches, 3 allotted, 2 unsuccessful,
+  holds released or kept exactly; screen totals equal Core Banking's holds.
 
 ## back-office registers and user accounts
 

@@ -63,9 +63,15 @@ export function commission(faceValue: string, rules: BidRules): string {
     .toFixed(2);
 }
 
-/** What is held on the settlement account: the full face value plus commission. */
-export function fundsHold(faceValue: string, rules: BidRules): string {
-  return new Big(faceValue).plus(commission(faceValue, rules)).toFixed(2);
+/**
+ * What is held on the settlement account, exactly as the bank holds it: for a
+ * competitive bid the cost at the bid price (face × price / 100), for a
+ * non-competitive bid the full face value (the price is not known until the result),
+ * plus commission on face value either way.
+ */
+export function fundsHold(faceValue: string, rules: BidRules, price: string | null = null): string {
+  const cost = price ? new Big(faceValue).times(price).div(100) : new Big(faceValue);
+  return cost.plus(commission(faceValue, rules)).round(2, Big.roundDown).toFixed(2);
 }
 
 /** Estimated cash to settle a competitive bid: face × price / 100. */

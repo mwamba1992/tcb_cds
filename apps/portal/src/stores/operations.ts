@@ -9,6 +9,7 @@ import {
   type ReconRun,
 } from '../api';
 import { backofficeApi, type CdsTask } from '../api/live/backoffice';
+import { submissionApi } from '../api/live/bidding';
 import { LIVE_AUTH } from '../config/portal';
 import { useSessionStore } from './session';
 
@@ -37,7 +38,7 @@ export const useOperationsStore = defineStore('operations', () => {
     const [o, k, b, r, c] = await Promise.allSettled([
       api.opsOverview(),
       kycAllowed ? (LIVE_AUTH ? backofficeApi.kycCases() : api.kycCases()) : Promise.resolve([]),
-      api.batches(),
+      LIVE_AUTH ? (session.can('bid:read:all') ? submissionApi.batches() : Promise.resolve([])) : api.batches(),
       api.reconciliation(),
       LIVE_AUTH && session.can('cds:open') ? backofficeApi.cdsTasks() : Promise.resolve([]),
     ]);
@@ -88,6 +89,10 @@ export const useOperationsStore = defineStore('operations', () => {
   }
 
   async function refreshBatches() {
+    if (LIVE_AUTH) {
+      batches.value = await submissionApi.batches();
+      return;
+    }
     const [b, o] = await Promise.all([api.batches(), api.opsOverview()]);
     batches.value = b;
     overview.value = o;
@@ -104,14 +109,27 @@ export const useOperationsStore = defineStore('operations', () => {
   }
 
   async function prepareBatch(batchId: string) {
-    await api.prepareBatch(batchId, actor());
+    if (LIVE_AUTH) await submissionApi.prepare(batchId);
+    else await api.prepareBatch(batchId, actor());
     await refreshBatches();
   }
 
-  async function approveBatch(batchId: string) {
-    await api.approveBatch(batchId, actor());
+  /** Live: the checker's password confirms the approval (development stand-in). */
+  async function approveBatch(batchId: string, password?: string) {
+    if (LIVE_AUTH) await submissionApi.approve(batchId, password ?? '');
+    else await api.approveBatch(batchId, actor());
     await refreshBatches();
-    watchSubmissions();
+    if (!LIVE_AUTH) watchSubmissions();
+  }
+
+  async function closeBidding(isin: string, reason: string) {
+    await submissionApi.closeBidding(isin, reason);
+    await refreshBatches();
+  }
+
+  async function resubmitBatch(batchId: string) {
+    await submissionApi.resubmit(batchId);
+    await refreshBatches();
   }
 
   async function resolveBreak(rowId: string) {
@@ -133,6 +151,9 @@ export const useOperationsStore = defineStore('operations', () => {
     completeCds,
     prepareBatch,
     approveBatch,
+    closeBidding,
+    resubmitBatch,
+    refreshBatches,
     resolveBreak,
   };
 });

@@ -86,6 +86,7 @@ export type BidStatus =
   | 'Allotted'
   | 'Partially allotted'
   | 'Unsuccessful'
+  | 'Rejected'
   | 'Withdrawn';
 
 export interface Bid {

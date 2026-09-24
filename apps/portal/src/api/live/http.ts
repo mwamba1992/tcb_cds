@@ -30,15 +30,15 @@ export function useTokens(source: TokenSource): void {
   tokens = source;
 }
 
-export type Service = 'identity' | 'investor';
+export type Service = 'identity' | 'investor' | 'auction';
 
 export async function request<T>(
   service: Service,
   path: string,
-  init: { method?: string; body?: unknown; auth?: boolean } = {},
+  init: { method?: string; body?: unknown; auth?: boolean; headers?: Record<string, string> } = {},
 ): Promise<T> {
   const send = () => {
-    const headers: Record<string, string> = { accept: 'application/json' };
+    const headers: Record<string, string> = { accept: 'application/json', ...(init.headers ?? {}) };
     if (init.body !== undefined) headers['content-type'] = 'application/json';
     const token = init.auth === false ? null : tokens?.accessToken();
     if (token) headers['authorization'] = `Bearer ${token}`;
@@ -103,6 +103,32 @@ export function messageFor(code: string, detail: AccountError['detail'], status:
         : 'The details you entered are incorrect.';
     case 'pin_locked':
       return 'Your account is locked after too many wrong PINs. Reset your PIN to continue.';
+    case 'bidding_closed':
+      return 'Bidding for this auction has closed.';
+    case 'insufficient_funds':
+      return 'There is not enough available balance on your TCB account for this bid.';
+    case 'not_ready':
+      return 'Your account is not ready to bid yet. Check Your account for what is missing.';
+    case 'step_up_amount':
+    case 'step_up_used':
+      return 'Your PIN approval has expired. Enter your PIN again.';
+    case 'face_value_below_minimum':
+      return 'The amount is below the minimum for this auction.';
+    case 'face_value_not_multiple':
+      return 'The amount must be in steps of TZS 100,000.';
+    case 'face_value_not_whole':
+      return 'Enter the amount in whole shillings.';
+    case 'invalid_price':
+      return 'Enter a price per 100 with at most two decimals.';
+    case 'not_withdrawable':
+    case 'not_amendable':
+      return 'This bid has already gone to the Bank of Tanzania and can no longer be changed.';
+    case 'bidding_open':
+      return 'Bidding is still open. Prepare the batch after TCB’s cut-off, or close bidding early.';
+    case 'no_bids':
+      return 'There are no bids waiting for a batch.';
+    case 'bot_closed':
+      return 'The Bank of Tanzania has already closed this auction.';
     case 'maker_checker':
       return 'You took the maker decision on this case. A different user must approve it.';
     case 'invalid_state':

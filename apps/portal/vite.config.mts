@@ -43,6 +43,7 @@ export default defineConfig(({ mode }) => {
       proxy: {
         '/api/identity': { target: 'http://localhost:3101', rewrite: (p) => p.replace(/^\/api\/identity/, '') },
         '/api/investor': { target: 'http://localhost:3102', rewrite: (p) => p.replace(/^\/api\/investor/, '') },
+        '/api/auction': { target: 'http://localhost:3103', rewrite: (p) => p.replace(/^\/api\/auction/, '') },
       },
     },
     preview: { port: 4410, host: 'localhost' },

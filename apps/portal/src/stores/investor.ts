@@ -9,6 +9,9 @@ import {
   type InvestorSummary,
   type PlaceBidRequest,
 } from '../api';
+import { biddingApi } from '../api/live/bidding';
+import { LIVE_AUTH } from '../config/portal';
+import { useAccountStore } from './account';
 
 /** The signed-in investor's view of the platform. */
 export const useInvestorStore = defineStore('investor', () => {
@@ -19,7 +22,28 @@ export const useInvestorStore = defineStore('investor', () => {
   const bids = ref<Bid[]>([]);
   const loaded = ref(false);
 
+  /**
+   * With live sign-in, auctions, bids and funds come from the auction service. Holdings
+   * and payments stay empty until settlement credits securities (the next round):
+   * showing sample holdings to a real customer would be worse than showing none.
+   */
   async function load() {
+    if (LIVE_AUTH) {
+      const account = useAccountStore();
+      const ready = account.onboarding?.canBid ?? false;
+      const [s, a, b] = await Promise.all([
+        ready ? biddingApi.summary(account.onboarding?.profile?.firstName ?? '') : Promise.resolve(null),
+        biddingApi.auctions(),
+        ready ? biddingApi.myBids() : Promise.resolve([]),
+      ]);
+      summary.value = s;
+      auctions.value = a;
+      holdings.value = [];
+      cashflows.value = [];
+      bids.value = b;
+      loaded.value = true;
+      return;
+    }
     const [s, a, h, c, b] = await Promise.all([
       api.investorSummary(),
       api.auctions(),
@@ -36,19 +60,31 @@ export const useInvestorStore = defineStore('investor', () => {
   }
 
   async function refreshAccount() {
+    if (LIVE_AUTH) {
+      const account = useAccountStore();
+      const [s, b] = await Promise.all([
+        biddingApi.summary(account.onboarding?.profile?.firstName ?? ''),
+        biddingApi.myBids(),
+      ]);
+      summary.value = s;
+      bids.value = b;
+      return;
+    }
     const [s, b] = await Promise.all([api.investorSummary(), api.myBids()]);
     summary.value = s;
     bids.value = b;
   }
 
   async function placeBid(request: PlaceBidRequest): Promise<Bid> {
-    const bid = await api.placeBid(request);
+    const target = auction(request.auctionId);
+    const bid = LIVE_AUTH && target ? await biddingApi.placeBid(request, target) : await api.placeBid(request);
     await refreshAccount();
     return bid;
   }
 
   async function withdraw(reference: string) {
-    await api.withdrawBid(reference);
+    if (LIVE_AUTH) await biddingApi.withdraw(reference);
+    else await api.withdrawBid(reference);
     await refreshAccount();
   }
 

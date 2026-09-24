@@ -49,6 +49,9 @@ describe('hold and commission', () => {
   it('matches the design: 0.10% of 10,000,000 is 10,000, held on top', () => {
     expect(commission('10000000', bill)).toBe('10000.00');
     expect(fundsHold('10000000', bill)).toBe('10010000.00');
+    // Competitive: cost at the bid price, as the bank holds it.
+    expect(fundsHold('10000000', bill, '88.50')).toBe('8860000.00');
+    expect(fundsHold('10000000', { ...bill, commissionBps: 0 }, '88.50')).toBe('8850000.00');
   });
 
   it('rounds commission half-up to the cent', () => {

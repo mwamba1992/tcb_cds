@@ -7,7 +7,7 @@ import SegmentedControl from '../../components/SegmentedControl.vue';
 import StatusChip from '../../components/StatusChip.vue';
 import { useAsync } from '../../composables/useAsync';
 import { useNow } from '../../composables/useNow';
-import { DEMO } from '../../config/portal';
+import { DEMO, LIVE_AUTH } from '../../config/portal';
 import {
   amountProblem,
   commission,
@@ -83,7 +83,9 @@ const fee = computed(() =>
   auction.value && amountValid.value ? commission(amount.value, auction.value.rules) : '0.00',
 );
 const hold = computed(() =>
-  auction.value && amountValid.value ? fundsHold(amount.value, auction.value.rules) : '0.00',
+  auction.value && amountValid.value
+    ? fundsHold(amount.value, auction.value.rules, competitive.value && priceValid.value ? price.value : null)
+    : '0.00',
 );
 const available = computed(() => store.summary?.availableBalance ?? '0.00');
 const insufficient = computed(() => amountValid.value && new Big(hold.value).gt(available.value));
@@ -296,7 +298,7 @@ async function confirm() {
               autocomplete="one-time-code"
               @input="onPin"
             />
-            <span v-if="DEMO" class="field-hint">Demo: any 4 digits.</span>
+            <span v-if="DEMO && !LIVE_AUTH" class="field-hint">Demo: any 4 digits.</span>
           </label>
           <p v-if="error" class="notice notice--error" role="alert">{{ error }}</p>
           <div class="actions">
@@ -312,7 +314,7 @@ async function confirm() {
         <!-- step 3: receipt -->
         <div v-else-if="placed" class="receipt">
           <div class="receipt-head">
-            <h3 class="receipt-title">Bid accepted</h3>
+            <h3 class="receipt-title">Bid received</h3>
             <StatusChip :status="placed.status" />
           </div>
           <dl class="receipt-grid">

@@ -16,10 +16,12 @@ const props = withDefaults(
     tone?: 'primary' | 'danger' | 'success';
     reasonLabel?: string;
     reasonPlaceholder?: string;
+    /** Ask for a password instead of a reason: a re-confirmation, not an explanation. */
+    secret?: boolean;
     /** Runs the change; throwing keeps the dialog open with the error. */
     action: (reason: string) => Promise<unknown>;
   }>(),
-  { description: undefined, tone: 'primary', reasonLabel: 'Reason', reasonPlaceholder: undefined },
+  { description: undefined, tone: 'primary', reasonLabel: 'Reason', reasonPlaceholder: undefined, secret: false },
 );
 const emit = defineEmits<{ close: []; done: [] }>();
 
@@ -44,14 +46,14 @@ watch(
 );
 
 async function confirm() {
-  if (reason.value.trim().length < 3) {
-    error.value = 'Give a reason of at least 3 characters.';
+  if (props.secret ? reason.value.length === 0 : reason.value.trim().length < 3) {
+    error.value = props.secret ? 'Enter your password.' : 'Give a reason of at least 3 characters.';
     return;
   }
   pending.value = true;
   error.value = null;
   try {
-    await props.action(reason.value.trim());
+    await props.action(props.secret ? reason.value : reason.value.trim());
     emit('done');
     emit('close');
   } catch (caught) {
@@ -68,7 +70,11 @@ async function confirm() {
       <h2 class="dialog-title">{{ title }}</h2>
       <p v-if="description" class="dialog-desc">{{ description }}</p>
       <slot />
-      <label class="field">
+      <label v-if="secret" class="field">
+        <span class="field-label">{{ reasonLabel }}</span>
+        <input v-model="reason" class="input input--text" type="password" autocomplete="current-password" />
+      </label>
+      <label v-else class="field">
         <span class="field-label">{{ reasonLabel }}</span>
         <textarea v-model="reason" class="input input--text" rows="3" maxlength="500" :placeholder="reasonPlaceholder" />
         <span class="field-hint">Recorded in the audit trail with your name.</span>

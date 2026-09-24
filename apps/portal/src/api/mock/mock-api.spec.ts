@@ -29,13 +29,14 @@ describe('placing and withdrawing bids', () => {
     pin: '1234',
   };
 
-  it('holds face value plus commission and issues a valid BD- reference', async () => {
+  it('holds the cost at the bid price plus commission and issues a valid BD- reference', async () => {
     const platform = api();
     const placed = await platform.placeBid(bid);
-    expect(placed.heldAmount).toBe('10010000.00');
+    // 10,000,000 × 88.50 / 100 + 0.10% commission on face value.
+    expect(placed.heldAmount).toBe('8860000.00');
     expect(placed.status).toBe('Pending submission');
     expect(isValidReference(placed.reference, 'bid')).toBe(true);
-    expect((await platform.investorSummary()).availableBalance).toBe('16330000.00');
+    expect((await platform.investorSummary()).availableBalance).toBe('17480000.00');
   });
 
   it('refuses a bid the account cannot cover', async () => {

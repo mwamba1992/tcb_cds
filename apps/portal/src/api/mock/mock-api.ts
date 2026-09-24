@@ -145,7 +145,7 @@ export class MockPortalApi implements PortalApi {
       throw new ApiError('INVALID_BID', 'Enter a price per 100 between 0 and 110.');
     }
     // The server computes the hold. The portal's preview is never trusted for this.
-    const hold = fundsHold(request.faceValue, auction.rules);
+    const hold = fundsHold(request.faceValue, auction.rules, request.price);
     if (new Big(hold).gt(this.available)) {
       throw new ApiError(
         'INSUFFICIENT_FUNDS',
