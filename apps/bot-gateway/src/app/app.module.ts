@@ -4,6 +4,7 @@ import { APP_GUARD, Reflector } from '@nestjs/core';
 import { GovsecAuthModule, ServiceAuthGuard } from '@govsec/auth';
 import { DEAD_LETTER_EXCHANGE, EXCHANGES } from '@govsec/events';
 import { OutboxRelay, OUTBOX_OPTIONS, OUTBOX_STORE } from '@govsec/outbox';
+import { botServiceProvider } from '../bot/bot.providers';
 import { BotGatewayConfigModule } from '../config/config.module';
 import { CONFIG, loadConfig, type BotGatewayConfig } from '../config/configuration';
 import { HealthController } from '../health/health.controller';
@@ -47,6 +48,7 @@ const bootConfig = loadConfig();
         }),
       inject: [Reflector],
     },
+    botServiceProvider,
     BotGatewayOutboxStore,
     { provide: OUTBOX_STORE, useExisting: BotGatewayOutboxStore },
     {
