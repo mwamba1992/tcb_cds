@@ -14,6 +14,8 @@ export interface NotificationConfig {
   };
   rabbitmq: { url: string };
   internalSecret: string;
+  /** Development only: write message bodies (with live codes) to the log. */
+  logBodies: boolean;
 }
 
 class ConfigError extends Error {
@@ -59,6 +61,9 @@ export function loadConfig(): NotificationConfig {
     },
     rabbitmq: { url: required('RABBITMQ_URL') },
     internalSecret: required('INTERNAL_SERVICE_SECRET'),
+    logBodies:
+      (optional('NOTIFICATION_LOG_BODIES') ?? (nodeEnv === 'production' ? 'false' : 'true')) ===
+      'true',
   };
 
   if (nodeEnv === 'production') {
@@ -67,6 +72,11 @@ export function loadConfig(): NotificationConfig {
     }
     if (/dev-only|change-me/i.test(config.internalSecret)) {
       throw new ConfigError('INTERNAL_SERVICE_SECRET still holds a development placeholder');
+    }
+    if (config.logBodies) {
+      throw new ConfigError(
+        'NOTIFICATION_LOG_BODIES must be off in production: bodies carry one-time codes',
+      );
     }
   }
   return config;

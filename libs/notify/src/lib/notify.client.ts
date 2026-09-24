@@ -9,22 +9,21 @@ export interface NotifyOptions {
 }
 
 export interface NotifyRequest {
-  accountId?: string;
+  /** Tanzanian mobile number, +255… */
   destination: string;
-  channel?: 'sms' | 'push' | 'email';
+  /** A key from apps/notification/src/templates/templates.ts, e.g. 'otp.registration'. */
   templateKey: string;
   category: 'security' | 'money' | 'auction' | 'account' | 'marketing';
   variables: Record<string, string>;
-  /** True for one-time codes — the body is not stored. */
-  sensitive?: boolean;
+  /** Kiswahili by default. */
+  locale?: 'en' | 'sw';
 }
 
 /**
  * Sends a notification directly, bypassing the event bus.
  *
- * Used for messages whose body is a credential — one-time codes and PIN
- * resets. Those cannot be published as events, because every consumer of an exchange
- * sees every field.
+ * Used for messages whose body is a credential — one-time codes and PIN resets. Those
+ * must never travel as events, because every consumer of an exchange sees every field.
  *
  * Failure is logged, never thrown. A registration must not fail because the SMS gateway
  * is briefly down: the account exists, and the user can request another code. Throwing
@@ -43,7 +42,7 @@ export class NotifyClient {
         {
           method: 'POST',
           headers: internalHeaders(this.options.serviceName, this.options.internalSecret),
-          body: JSON.stringify({ channel: 'sms', ...request }),
+          body: JSON.stringify(request),
         },
       );
       if (!response.ok) {

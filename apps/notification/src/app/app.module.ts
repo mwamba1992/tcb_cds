@@ -5,6 +5,9 @@ import { GovsecAuthModule, ServiceAuthGuard } from '@govsec/auth';
 import { DEAD_LETTER_EXCHANGE } from '@govsec/events';
 import { NotificationConfigModule } from '../config/config.module';
 import { CONFIG, loadConfig, type NotificationConfig } from '../config/configuration';
+import { StubSmsChannel } from '../channels/sms.channel';
+import { DispatchService } from '../dispatch/dispatch.service';
+import { InternalDispatchController } from '../dispatch/internal-dispatch.controller';
 import { HealthController } from '../health/health.controller';
 import { PrismaModule } from '../prisma/prisma.module';
 
@@ -31,8 +34,10 @@ const bootConfig = loadConfig();
       inject: [CONFIG],
     }),
   ],
-  controllers: [HealthController],
+  controllers: [HealthController, InternalDispatchController],
   providers: [
+    StubSmsChannel,
+    DispatchService,
     {
       provide: APP_GUARD,
       useFactory: (reflector: Reflector) =>
