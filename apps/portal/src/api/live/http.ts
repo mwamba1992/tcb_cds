@@ -111,6 +111,18 @@ export function messageFor(code: string, detail: AccountError['detail'], status:
       return 'That CDS account number already belongs to another investor. Check the number.';
     case 'already_completed':
       return 'This CDS account has already been recorded.';
+    case 'self_change':
+      return 'You cannot change your own role or status. Ask another administrator.';
+    case 'username_taken':
+      return 'That username is already in use.';
+    case 'weak_password':
+      return 'The password must be at least 10 characters.';
+    case 'invalid_role':
+      return 'Choose a staff role.';
+    case 'not_locked':
+      return 'This PIN is not locked.';
+    case 'already_requested':
+      return 'An unlock is already waiting for a supervisor.';
     case 'forbidden':
       return 'Your role cannot do this.';
     case 'account_inactive':
@@ -125,7 +137,9 @@ export function messageFor(code: string, detail: AccountError['detail'], status:
     default:
       return status >= 500 || status === 0
         ? 'Something went wrong on our side. Please try again in a moment.'
-        : 'Please check the details and try again.';
+        : status === 400
+          ? 'Please check the details and try again. A reason of at least 3 characters is required for every change.'
+          : 'Please check the details and try again.';
   }
 }
 

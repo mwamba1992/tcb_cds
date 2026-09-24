@@ -104,3 +104,9 @@ export function eatAt(from: Date, daysAhead: number, hour: number, minute = 0): 
   eat.setUTCHours(hour - 3, minute, 0, 0);
   return eat;
 }
+
+/** "04 Nov 2026, 09:14" (EAT), or an em dash when there is no date. */
+export function formatDateTime(iso: string | null | undefined): string {
+  if (!iso) return '—';
+  return `${formatDate(iso)}, ${formatTime(iso)}`;
+}

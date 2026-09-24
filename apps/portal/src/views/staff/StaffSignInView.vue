@@ -3,6 +3,7 @@ import { ref } from 'vue';
 import { useRoute, useRouter } from 'vue-router';
 import AuthLayout from '../../components/AuthLayout.vue';
 import { useAsync } from '../../composables/useAsync';
+import { landingFor } from '../../router';
 import { useAccountStore } from '../../stores/account';
 
 /**
@@ -22,6 +23,7 @@ const DEV_ACCOUNTS = [
   { username: 'salum.kweka', role: 'Checker' },
   { username: 'neema.lyimo', role: 'Compliance' },
   { username: 'faraji.mrema', role: 'Treasury' },
+  { username: 'amani.ict', role: 'ICT admin' },
 ];
 
 function fill(user: string) {
@@ -47,7 +49,7 @@ async function signIn() {
     return;
   }
   const next = typeof route.query['next'] === 'string' ? route.query['next'] : null;
-  await router.replace(next?.startsWith('/ops') ? next : { name: 'staff-overview' });
+  await router.replace(next?.startsWith('/ops') ? next : landingFor('staff'));
 }
 </script>
 

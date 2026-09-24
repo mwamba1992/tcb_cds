@@ -8,6 +8,9 @@ const PATHS = {
   submit: 'M21 3 10 14M21 3l-6.5 18-4-8-8-4z',
   recon: 'M4 8h14l-3-3M20 16H6l3 3',
   cds: 'M4 7h16v12H4zM4 11h16M8 15h4M9 3h6v4H9z',
+  customers: 'M16 20v-1.5a3.5 3.5 0 0 0-3.5-3.5h-5A3.5 3.5 0 0 0 4 18.5V20M10 11a3.5 3.5 0 1 0 0-7 3.5 3.5 0 0 0 0 7zM20 20v-1.5a3.5 3.5 0 0 0-2.5-3.35M15.5 4.15a3.5 3.5 0 0 1 0 6.7',
+  bank: 'M3 10 12 4l9 6M5 10v8M9.5 10v8M14.5 10v8M19 10v8M3 20h18',
+  users: 'M12 3l7 3v5c0 4.5-3 8.5-7 10-4-1.5-7-5.5-7-10V6zM9.5 12l2 2 3.5-4',
 } as const;
 
 export type IconName = keyof typeof PATHS;

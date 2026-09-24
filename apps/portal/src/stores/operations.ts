@@ -27,19 +27,25 @@ export const useOperationsStore = defineStore('operations', () => {
    * reconciliation are still sample data until the auction and settlement services
    * serve them.
    */
+  /**
+   * Each part loads only for a role that may see it, and independently: a treasury
+   * officer has no KYC queue, and that must not stop their reconciliation loading.
+   */
   async function load() {
-    const [o, k, b, r, c] = await Promise.all([
+    const session = useSessionStore();
+    const kycAllowed = !LIVE_AUTH || session.can('kyc:review');
+    const [o, k, b, r, c] = await Promise.allSettled([
       api.opsOverview(),
-      LIVE_AUTH ? backofficeApi.kycCases() : api.kycCases(),
+      kycAllowed ? (LIVE_AUTH ? backofficeApi.kycCases() : api.kycCases()) : Promise.resolve([]),
       api.batches(),
       api.reconciliation(),
-      LIVE_AUTH && useSessionStore().can('cds:open') ? backofficeApi.cdsTasks() : Promise.resolve([]),
+      LIVE_AUTH && session.can('cds:open') ? backofficeApi.cdsTasks() : Promise.resolve([]),
     ]);
-    overview.value = o;
-    kyc.value = k;
-    batches.value = b;
-    recon.value = r;
-    cdsTasks.value = c;
+    if (o.status === 'fulfilled') overview.value = o.value;
+    if (k.status === 'fulfilled') kyc.value = k.value;
+    if (b.status === 'fulfilled') batches.value = b.value;
+    if (r.status === 'fulfilled') recon.value = r.value;
+    if (c.status === 'fulfilled') cdsTasks.value = c.value;
     loaded.value = true;
   }
 
@@ -68,7 +74,7 @@ export const useOperationsStore = defineStore('operations', () => {
 
   async function refreshLive() {
     const [k, c] = await Promise.all([
-      backofficeApi.kycCases(),
+      useSessionStore().can('kyc:review') ? backofficeApi.kycCases() : Promise.resolve([]),
       useSessionStore().can('cds:open') ? backofficeApi.cdsTasks() : Promise.resolve([]),
     ]);
     kyc.value = k;

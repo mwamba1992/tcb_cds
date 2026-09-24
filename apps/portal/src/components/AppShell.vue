@@ -31,6 +31,7 @@ const nav = computed(() =>
     .getRoutes()
     .filter((r) => r.meta.nav && r.meta.portal === session.portal)
     .filter((r) => !r.meta.permission || session.can(r.meta.permission))
+    .filter((r) => !r.meta.anyPermission || r.meta.anyPermission.some((p) => session.can(p)))
     .sort((a, b) => (a.meta.nav?.order ?? 0) - (b.meta.nav?.order ?? 0))
     .map((r) => ({
       name: r.name as string,

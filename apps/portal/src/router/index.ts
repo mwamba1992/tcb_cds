@@ -12,6 +12,8 @@ declare module 'vue-router' {
     title?: string;
     /** Required to see the screen at all. Actions check their own permissions too. */
     permission?: Permission;
+    /** Allowed with any one of these, for a screen whose tabs serve different roles. */
+    anyPermission?: Permission[];
     nav?: { label: string; icon: string; order: number };
     /** Highlights a parent nav item on a child screen (the bid form → Auctions). */
     navParent?: string;
@@ -27,6 +29,21 @@ declare module 'vue-router' {
 const home = (portal: Portal) => ({
   name: portal === 'staff' ? 'staff-overview' : 'investor-dashboard',
 });
+
+/**
+ * The first screen in the sidebar this user may open. An ICT administrator, say, has
+ * no overview; sending them there would show a screen whose data they cannot load.
+ */
+export function landingFor(portal: Portal): { name: string } {
+  const session = useSessionStore();
+  const allowed = router
+    .getRoutes()
+    .filter((r) => r.meta.nav && r.meta.portal === portal)
+    .filter((r) => !r.meta.permission || session.can(r.meta.permission))
+    .filter((r) => !r.meta.anyPermission || r.meta.anyPermission.some((p) => session.can(p)))
+    .sort((a, b) => (a.meta.nav?.order ?? 0) - (b.meta.nav?.order ?? 0));
+  return allowed[0]?.name ? { name: allowed[0].name as string } : home(portal);
+}
 
 const router = createRouter({
   history: createWebHistory(),
@@ -54,9 +71,8 @@ router.beforeEach(async (to) => {
     const staff = to.meta.portal === 'staff';
     const holds = account.signedIn && (staff ? account.isStaff : account.isInvestor);
     const signIn = staff ? 'staff-sign-in' : 'account-sign-in';
-    const landing = staff ? 'staff-overview' : 'investor-dashboard';
     if (to.meta.public) {
-      if (holds) return { name: landing };
+      if (holds) return landingFor(to.meta.portal);
     } else if (!holds) {
       const next = to.fullPath === '/invest' || to.fullPath === '/ops' ? {} : { next: to.fullPath };
       if (session.portal !== to.meta.portal) session.setPortal(to.meta.portal);
@@ -70,8 +86,11 @@ router.beforeEach(async (to) => {
     session.setPortal(to.meta.portal);
     if (session.portal !== to.meta.portal) return home(session.portal);
   }
-  if (to.meta.permission && !session.can(to.meta.permission)) {
-    const fallback = home(session.portal);
+  const denied =
+    (to.meta.permission && !session.can(to.meta.permission)) ||
+    (to.meta.anyPermission && !to.meta.anyPermission.some((p) => session.can(p)));
+  if (denied) {
+    const fallback = landingFor(session.portal);
     return to.name === fallback.name ? true : fallback;
   }
   return true;

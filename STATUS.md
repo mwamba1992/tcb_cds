@@ -9,8 +9,8 @@
 | Services scaffolded | **7 of 7**: identity, investor, auction, bot-gateway, cbs-gateway, settlement, notification |
 | Shared libraries    | 9: money, events, outbox, auth, settings, notify, reference, pagination, bot-client         |
 | Domain endpoints    | bot-gateway, notification, identity, investor (onboarding, KYC, CDS), cbs-gateway (stub)    |
-| Unit tests          | 198, all passing                                                                            |
-| Migrations          | 15                                                                                          |
+| Unit tests          | 203, all passing                                                                            |
+| Migrations          | 16                                                                                          |
 | CI                  | lint · test · typecheck · build, against real Postgres and RabbitMQ                         |
 
 Every service builds, boots, connects to its own schema and to RabbitMQ, and answers
@@ -65,6 +65,24 @@ Every service builds, boots, connects to its own schema and to RabbitMQ, and ans
   suspicious. No phone numbers or credentials in any payload.
 - Development: `OTP_FIXED_CODE=123456` (refused in production).
 - Not yet: staff sign-in (next round, with the back-office KYC screen), device binding.
+
+## back-office registers and user accounts
+
+- **Customers**: search by name, NV- reference, phone or NIDA digits; filter by status
+  (ready to bid, awaiting accounts, under review…); detail page with personal data,
+  checks, accounts and history. Opening a detail page is logged.
+- **CDS accounts**: *To open* tasks and the *Register* of every account recorded.
+- **TCB accounts**: linked settlement accounts and accounts being opened.
+- **User accounts**: *Staff* (ICT admin: add, re-role, disable/enable, unlock; never
+  yourself), *Customer logins* (lock state, devices, sign out everywhere) and *Unlock
+  requests* (officer requests after verifying the caller; a supervisor approves).
+- One table standard: `DataTable` + `useTable`/`useLocalTable` in the portal, and
+  `TableQuery`/`TablePage` in `@govsec/pagination` (page, pageSize 25/50/100, q,
+  sort in; items, total, page, pageSize out). Every staff table uses it.
+- Lists mask NIN and phone. `investor:read` for operations, supervisors, compliance
+  and treasury; the ICT admin and BoT observer see no customer data.
+- Staff land on the first screen their role may open. Dev staff now include
+  `amani.ict` (ICT admin).
 
 ## back office on real data
 

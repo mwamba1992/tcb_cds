@@ -28,6 +28,24 @@ export const staffRoutes: RouteRecordRaw[] = [
     },
   },
   {
+    path: '/ops/customers',
+    name: 'staff-customers',
+    component: () => import('../views/staff/CustomersView.vue'),
+    meta: {
+      portal: 'staff',
+      title: 'Customers',
+      permission: PERMISSIONS.investorRead,
+      nav: { label: 'Customers', icon: 'customers', order: 1.5 },
+    },
+  },
+  {
+    path: '/ops/customers/:reference',
+    name: 'staff-customer',
+    component: () => import('../views/staff/CustomerDetailView.vue'),
+    props: true,
+    meta: { portal: 'staff', title: 'Customer', permission: PERMISSIONS.investorRead, navParent: 'staff-customers' },
+  },
+  {
     path: '/ops/kyc',
     name: 'staff-kyc',
     component: () => import('../views/staff/KycView.vue'),
@@ -48,6 +66,35 @@ export const staffRoutes: RouteRecordRaw[] = [
       permission: PERMISSIONS.cdsOpen,
       nav: { label: 'CDS accounts', icon: 'cds', order: 2.5 },
     },
+  },
+  {
+    path: '/ops/bank-accounts',
+    name: 'staff-bank-accounts',
+    component: () => import('../views/staff/BankAccountsView.vue'),
+    meta: {
+      portal: 'staff',
+      title: 'TCB accounts',
+      permission: PERMISSIONS.investorRead,
+      nav: { label: 'TCB accounts', icon: 'bank', order: 2.7 },
+    },
+  },
+  {
+    path: '/ops/users',
+    name: 'staff-users',
+    component: () => import('../views/staff/UsersView.vue'),
+    meta: {
+      portal: 'staff',
+      title: 'User accounts',
+      anyPermission: [PERMISSIONS.adminUserManage, PERMISSIONS.customerLoginRead],
+      nav: { label: 'User accounts', icon: 'users', order: 5 },
+    },
+  },
+  {
+    path: '/ops/users/customers/:id',
+    name: 'staff-customer-login',
+    component: () => import('../views/staff/CustomerLoginView.vue'),
+    props: true,
+    meta: { portal: 'staff', title: 'Customer login', permission: PERMISSIONS.customerLoginRead, navParent: 'staff-users' },
   },
   {
     path: '/ops/submission',

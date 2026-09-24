@@ -1,5 +1,6 @@
 import type { KycAction, KycCase, KycStatus, Risk } from '../types';
 import type { Tokens } from './account';
+import { tableQuery, type TablePage, type TableParams } from '../../composables/useTable';
 import { request } from './http';
 
 /**
@@ -96,4 +97,164 @@ export const backofficeApi = {
       `/v1/cds/requests/${encodeURIComponent(reference)}/complete`,
       { method: 'POST', body: { cdsAccount } },
     ),
+};
+
+// ---------------------------------------------------------------- registers and users
+
+
+export interface CustomerRow {
+  reference: string;
+  name: string | null;
+  nidaNumber: string | null;
+  type: string;
+  status: string;
+  canBid: boolean;
+  risk: string | null;
+  bankAccount: string | null;
+  bankStatus: string | null;
+  cdsAccount: string | null;
+  cdsStatus: string;
+  registeredAt: string;
+  submittedAt: string | null;
+}
+
+export interface CustomerDetail {
+  reference: string;
+  type: string;
+  status: string;
+  risk: string | null;
+  name: string | null;
+  nidaNumber: string | null;
+  phone: string | null;
+  email: string | null;
+  address: string | null;
+  gender: string | null;
+  tin: string | null;
+  dateOfBirth: string | null;
+  occupation: string | null;
+  sourceOfFunds: string | null;
+  pepDeclared: boolean | null;
+  registeredAt: string;
+  submittedAt: string | null;
+  approvedAt: string | null;
+  bank: { status: string | null; account: string | null; openingRef: string | null };
+  cds: { status: string; account: string | null };
+  checks: { source: string; outcome: string; at: string; details: { reasons?: string[] } }[];
+  cases: { reference: string; status: string; risk: string; openedAt: string }[];
+  history: { action: string; by: string | null; role: string; subject: string; note: string | null; at: string }[];
+}
+
+export interface CdsRegisterRow {
+  cdsAccount: string;
+  investorReference: string;
+  name: string | null;
+  requestReference: string;
+  recordedBy: string | null;
+  recordedAt: string;
+}
+
+export interface BankAccountRow {
+  investorReference: string;
+  name: string | null;
+  bankStatus: string;
+  bankAccount: string | null;
+  cbsCustomerId: string | null;
+  openingReference: string | null;
+  approvedAt: string | null;
+}
+
+export interface StaffRow {
+  accountId: string;
+  username: string;
+  displayName: string;
+  role: string;
+  status: string;
+  locked: boolean;
+  lastLoginAt: string | null;
+  createdAt: string;
+}
+
+export interface CustomerLoginRow {
+  accountId: string;
+  phone: string;
+  registeredAt: string;
+  lastLoginAt: string | null;
+  pinSet: boolean;
+  pinLocked: boolean;
+  activeSessions: number;
+  unlockPending: boolean;
+}
+
+export interface UnlockRequestRow {
+  id: string;
+  accountId: string;
+  phone?: string;
+  requestedBy: string | null;
+  reason: string;
+  status: string;
+  decidedBy: string | null;
+  note: string | null;
+  requestedAt: string;
+  decidedAt: string | null;
+}
+
+export interface CustomerLoginDetail {
+  accountId: string;
+  phone: string;
+  registeredAt: string;
+  lastLoginAt: string | null;
+  pinSet: boolean;
+  pinSetAt: string | null;
+  pinLocked: boolean;
+  pinLockedAt: string | null;
+  failedPinAttempts: number;
+  sessions: { startedAt: string; expiresAt: string; ipAddress: string | null; device: string | null }[];
+  unlockRequests: UnlockRequestRow[];
+  history: { action: string; by: string | null; detail: string | null; reason: string | null; at: string }[];
+}
+
+const table = <T>(service: 'identity' | 'investor', path: string) => (params: TableParams) =>
+  request<TablePage<T>>(service, `${path}?${tableQuery(params)}`);
+
+export const registersApi = {
+  customers: table<CustomerRow>('investor', '/v1/investors'),
+  customer: (reference: string) => request<CustomerDetail>('investor', `/v1/investors/${encodeURIComponent(reference)}`),
+  cdsRegister: table<CdsRegisterRow>('investor', '/v1/cds/accounts'),
+  bankAccounts: table<BankAccountRow>('investor', '/v1/bank-accounts'),
+};
+
+export const usersApi = {
+  staff: table<StaffRow>('identity', '/v1/admin/staff'),
+  staffHistory: (id: string) =>
+    request<{ action: string; by: string | null; detail: string | null; reason: string | null; at: string }[]>(
+      'identity',
+      `/v1/admin/staff/${id}/history`,
+    ),
+  createStaff: (body: { username: string; displayName: string; role: string; password?: string; reason: string }) =>
+    request<{ accountId: string }>('identity', '/v1/admin/staff', { method: 'POST', body }),
+  updateStaff: (id: string, body: { role?: string; status?: 'active' | 'suspended'; reason: string }) =>
+    request<StaffRow>('identity', `/v1/admin/staff/${id}`, { method: 'PATCH', body }),
+  unlockStaff: (id: string, reason: string) =>
+    request<void>('identity', `/v1/admin/staff/${id}/unlock`, { method: 'POST', body: { reason } }),
+  resetStaffPassword: (id: string, password: string, reason: string) =>
+    request<void>('identity', `/v1/admin/staff/${id}/password`, { method: 'POST', body: { password, reason } }),
+
+  customerLogins: table<CustomerLoginRow>('identity', '/v1/admin/customer-logins'),
+  customerLogin: (id: string) => request<CustomerLoginDetail>('identity', `/v1/admin/customer-logins/${id}`),
+  signOutCustomer: (id: string, reason: string) =>
+    request<{ sessionsEnded: number }>('identity', `/v1/admin/customer-logins/${id}/sign-out`, {
+      method: 'POST',
+      body: { reason },
+    }),
+  requestUnlock: (id: string, reason: string) =>
+    request<UnlockRequestRow>('identity', `/v1/admin/customer-logins/${id}/unlock-requests`, {
+      method: 'POST',
+      body: { reason },
+    }),
+  unlockRequests: table<UnlockRequestRow>('identity', '/v1/admin/customer-logins/unlock-requests'),
+  decideUnlock: (id: string, decision: 'approve' | 'reject', note?: string) =>
+    request<void>('identity', `/v1/admin/customer-logins/unlock-requests/${id}/decision`, {
+      method: 'POST',
+      body: { decision, ...(note ? { note } : {}) },
+    }),
 };
