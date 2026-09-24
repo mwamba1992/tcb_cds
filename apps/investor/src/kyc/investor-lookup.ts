@@ -1,6 +1,7 @@
-import { Controller, Get, Injectable, NotFoundException, Param } from '@nestjs/common';
+import { Controller, Get, Injectable, Logger, NotFoundException, Param } from '@nestjs/common';
 import { ApiBearerAuth, ApiOperation, ApiTags } from '@nestjs/swagger';
-import { PERMISSIONS, RequirePermissions } from '@govsec/auth';
+import { CurrentUser, PERMISSIONS, RequirePermissions, type AuthenticatedUser } from '@govsec/auth';
+import { IdentityClient } from '../clients/clients';
 import { isValidReference, normaliseReference } from '@govsec/reference';
 import { PrismaService } from '../prisma/prisma.service';
 
@@ -10,9 +11,15 @@ import { PrismaService } from '../prisma/prisma.service';
  */
 @Injectable()
 export class InvestorLookupService {
-  constructor(private readonly prisma: PrismaService) {}
+  private readonly logger = new Logger(InvestorLookupService.name);
 
-  async byReference(raw: string) {
+  constructor(
+    private readonly prisma: PrismaService,
+    private readonly identity: IdentityClient,
+  ) {}
+
+  /** The full record, including personal data. Each view is written to the trail. */
+  async byReference(raw: string, viewer: AuthenticatedUser) {
     // Validated before any query: a mistyped reference never becomes a lookup.
     if (!isValidReference(raw, 'investor')) throw new NotFoundException('No investor with that reference');
     const investor = await this.prisma.investor.findUnique({
@@ -25,9 +32,29 @@ export class InvestorLookupService {
       },
     });
     if (!investor) throw new NotFoundException('No investor with that reference');
-    const actions = await this.prisma.staffAction.findMany({
-      where: { investorId: investor.id },
-      orderBy: { at: 'asc' },
+    const [actions, phone] = await Promise.all([
+      this.prisma.staffAction.findMany({
+        where: { investorId: investor.id, action: { not: 'investor.view' } },
+        orderBy: { at: 'asc' },
+      }),
+      this.identity.contact(investor.accountId).then(
+        (c) => c.phoneNumber,
+        (error: unknown) => {
+          this.logger.warn(`Phone unavailable for ${investor.reference}: ${error instanceof Error ? error.message : String(error)}`);
+          return null;
+        },
+      ),
+    ]);
+    await this.prisma.staffAction.create({
+      data: {
+        actorId: viewer.accountId,
+        actorName: viewer.name ?? null,
+        actorRole: viewer.role,
+        action: 'investor.view',
+        subjectType: 'investor',
+        subjectRef: investor.reference,
+        investorId: investor.id,
+      },
     });
     const p = investor.individual;
     return {
@@ -37,6 +64,12 @@ export class InvestorLookupService {
       risk: investor.risk,
       name: p ? [p.firstName, p.middleName, p.lastName].filter(Boolean).join(' ') : null,
       nidaNumber: p?.nidaNumber ?? null,
+      phone,
+      email: p?.email ?? null,
+      address: p ? `${p.address}, ${p.district}, ${p.region}` : null,
+      gender: p?.gender ?? null,
+      tin: p?.tin ?? null,
+      registeredAt: investor.createdAt,
       dateOfBirth: p?.dateOfBirth.toISOString().slice(0, 10) ?? null,
       region: p?.region ?? null,
       occupation: p?.occupation ?? null,
@@ -60,9 +93,9 @@ export class InvestorLookupController {
   constructor(private readonly lookup: InvestorLookupService) {}
 
   @Get(':reference')
-  @RequirePermissions(PERMISSIONS.kycReview)
-  @ApiOperation({ summary: 'Staff: one investor by NV- reference, with checks and history' })
-  get(@Param('reference') reference: string) {
-    return this.lookup.byReference(reference);
+  @RequirePermissions(PERMISSIONS.investorRead)
+  @ApiOperation({ summary: 'Staff: one investor by NV- reference, with checks and history; views are logged' })
+  get(@Param('reference') reference: string, @CurrentUser() viewer: AuthenticatedUser) {
+    return this.lookup.byReference(reference, viewer);
   }
 }

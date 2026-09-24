@@ -27,6 +27,12 @@ export class IdentityClient {
     this.http = new InternalHttp('identity', config.services.identityUrl, config.internalSecret);
   }
 
+  /** The account behind a phone number, or null. */
+  async accountByPhone(phoneNumber: string): Promise<string | null> {
+    const found = await this.http.post<{ accountId: string | null }>('/internal/v1/accounts/by-phone', { phoneNumber });
+    return found.accountId;
+  }
+
   contact(accountId: string): Promise<Contact> {
     return this.http.get<Contact>(`/internal/v1/accounts/${encodeURIComponent(accountId)}/contact`);
   }

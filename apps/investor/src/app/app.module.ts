@@ -5,6 +5,8 @@ import { GovsecAuthModule, ServiceAuthGuard } from '@govsec/auth';
 import { DEAD_LETTER_EXCHANGE, EXCHANGES } from '@govsec/events';
 import { NotifyClient } from '@govsec/notify';
 import { OutboxRelay, OUTBOX_OPTIONS, OUTBOX_STORE } from '@govsec/outbox';
+import { RegistersController } from '../backoffice/registers.controller';
+import { RegistersService } from '../backoffice/registers.service';
 import { NIDA_REGISTRY, StubNidaRegistry } from '../checks/nida';
 import { SCREENING_LISTS, StubScreeningLists } from '../checks/screening';
 import { CbsClient, IdentityClient } from '../clients/clients';
@@ -53,7 +55,7 @@ const bootConfig = loadConfig();
     }),
   ],
   // OnboardingController first: its /v1/investors/me must match before /:reference.
-  controllers: [HealthController, OnboardingController, KycController, CdsController, InvestorLookupController],
+  controllers: [HealthController, OnboardingController, KycController, CdsController, RegistersController, InvestorLookupController],
   providers: [
     IdentityClient,
     CbsClient,
@@ -91,6 +93,7 @@ const bootConfig = loadConfig();
     KycService,
     CdsService,
     InvestorLookupService,
+    RegistersService,
     CbsEventsConsumer,
     {
       provide: APP_GUARD,
