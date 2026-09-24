@@ -8,6 +8,7 @@ import { OtpService } from './otp.service';
 import { normalisePhone } from './phone';
 import { PinService } from './pin.service';
 import { SessionService, type DeviceContext } from './session.service';
+import { StaffAuthService } from './staff-auth.service';
 import { TokenService } from './token.service';
 
 export type Locale = 'sw' | 'en';
@@ -44,7 +45,14 @@ export class AuthService {
     private readonly pins: PinService,
     private readonly tokens: TokenService,
     private readonly sessions: SessionService,
+    private readonly staff: StaffAuthService,
   ) {}
+
+  /** Development only: see StaffAuthService. */
+  async staffSignIn(input: { username: string; password: string }, device: DeviceContext): Promise<AuthResult> {
+    const accountId = await this.staff.verify(input.username, input.password);
+    return this.startSession(await this.account(accountId), device);
+  }
 
   /**
    * Send a registration code.
@@ -197,6 +205,7 @@ export class AuthService {
       role,
       sessionId,
       phoneVerified: account.phoneVerified,
+      name: account.displayName,
     });
     await this.sessions.recordRefreshToken(sessionId, pair.refreshToken);
     return { accountId, role, pinSet: account.pinHash !== null, ...pair };
@@ -211,6 +220,8 @@ export class AuthService {
     return {
       accountId: account.id,
       phoneNumber: account.phoneNumber,
+      username: account.username,
+      displayName: account.displayName,
       role: account.role,
       locale: account.locale,
       pinSet: account.pinHash !== null,
@@ -224,7 +235,13 @@ export class AuthService {
   }
 
   private async startSession(
-    account: { id: string; role: string; phoneVerified: boolean; pinHash: string | null },
+    account: {
+      id: string;
+      role: string;
+      phoneVerified: boolean;
+      pinHash: string | null;
+      displayName?: string | null;
+    },
     device: DeviceContext,
   ): Promise<AuthResult> {
     const role = this.role(account.role);
@@ -234,6 +251,7 @@ export class AuthService {
       role,
       sessionId,
       phoneVerified: account.phoneVerified,
+      name: account.displayName ?? null,
     });
     await this.sessions.recordRefreshToken(sessionId, pair.refreshToken);
     return { accountId: account.id, role, pinSet: account.pinHash !== null, ...pair };

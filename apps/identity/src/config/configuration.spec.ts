@@ -53,6 +53,31 @@ describe('identity configuration', () => {
     );
   });
 
+  it('refuses staff password sign-in in production', () => {
+    withEnv(
+      {
+        ...BASE,
+        NODE_ENV: 'production',
+        JWT_ALGORITHM: 'RS256',
+        JWT_PUBLIC_KEY: 'pub',
+        JWT_PRIVATE_KEY: 'priv',
+        STAFF_PASSWORD_LOGIN: 'true',
+      },
+      () => {
+        expect(() => loadConfig()).toThrow(/STAFF_PASSWORD_LOGIN/);
+      },
+    );
+  });
+
+  it('turns staff password sign-in off by default in production', () => {
+    withEnv(
+      { ...BASE, NODE_ENV: 'production', JWT_ALGORITHM: 'RS256', JWT_PUBLIC_KEY: 'pub', JWT_PRIVATE_KEY: 'priv', JWT_REFRESH_SECRET: 'r' },
+      () => {
+        expect(loadConfig().staffPasswordLogin).toBe(false);
+      },
+    );
+  });
+
   it('refuses HS256 in production', () => {
     withEnv({ ...BASE, NODE_ENV: 'production' }, () => {
       expect(() => loadConfig()).toThrow(/RS256/);

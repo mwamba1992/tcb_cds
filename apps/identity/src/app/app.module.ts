@@ -12,6 +12,7 @@ import { OtpService } from '../auth/otp.service';
 import { PinService } from '../auth/pin.service';
 import { SecretHasher } from '../auth/secret-hasher';
 import { SessionService } from '../auth/session.service';
+import { StaffAuthService } from '../auth/staff-auth.service';
 import { StepUpService } from '../auth/step-up.service';
 import { TokenService } from '../auth/token.service';
 import { IdentityConfigModule } from '../config/config.module';
@@ -55,6 +56,7 @@ const bootConfig = loadConfig();
     PinService,
     AuthService,
     StepUpService,
+    StaffAuthService,
     {
       provide: NotifyClient,
       useFactory: (config: IdentityConfig) =>

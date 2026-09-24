@@ -41,8 +41,15 @@ model OutboxMessage {
 /// stored.
 model Account {
   id                String    @id @default(uuid()) @db.Uuid
-  /// E.164, e.g. +255712345678.
-  phoneNumber       String    @unique @map("phone_number") @db.VarChar(16)
+  /// E.164, e.g. +255712345678. Investors always have one; staff may not.
+  phoneNumber       String?   @unique @map("phone_number") @db.VarChar(16)
+  /// Staff only: sign-in name and the name shown on their decisions.
+  username          String?   @unique @db.VarChar(60)
+  displayName       String?   @map("display_name") @db.VarChar(120)
+  /// Staff only, development only: production staff sign in through TCB's directory.
+  passwordHash      String?   @map("password_hash")
+  passwordFailedAttempts Int  @default(0) @map("password_failed_attempts")
+  passwordLockedAt  DateTime? @map("password_locked_at") @db.Timestamptz(6)
   role              String    @default("investor") @db.VarChar(40)
   /// active | suspended | closed. A PIN lockout is separate (pinLockedAt), because it
   /// is lifted by the account holder, not by staff.

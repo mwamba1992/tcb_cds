@@ -14,7 +14,7 @@ import { SecretHasher } from './secret-hasher';
 
 interface PinAccount {
   id: string;
-  phoneNumber: string;
+  phoneNumber: string | null;
   pinHash: string | null;
   pinLockedAt: Date | null;
   locale: string;
@@ -221,6 +221,7 @@ export class PinService {
 
   /** Tells the holder their PIN changed, so a change they did not make is noticed. */
   private async confirmBySms(account: PinAccount): Promise<void> {
+    if (!account.phoneNumber) return;
     await this.notify.send({
       destination: account.phoneNumber,
       templateKey: 'pin.set',

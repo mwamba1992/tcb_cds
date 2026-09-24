@@ -30,6 +30,8 @@ export interface IdentityConfig {
     fixedCode: string | null;
   };
   pin: { maxAttempts: number };
+  /** Development only: staff sign in with username and password. Refused in production. */
+  staffPasswordLogin: boolean;
   notificationUrl: string;
   rabbitmq: { url: string };
   internalSecret: string;
@@ -110,6 +112,8 @@ export function loadConfig(): IdentityConfig {
       fixedCode: optional('OTP_FIXED_CODE') ?? null,
     },
     pin: { maxAttempts: optionalNumber('PIN_MAX_ATTEMPTS', 5) },
+    staffPasswordLogin:
+      (optional('STAFF_PASSWORD_LOGIN') ?? (nodeEnv === 'production' ? 'false' : 'true')) === 'true',
     notificationUrl: optional('NOTIFICATION_URL') ?? 'http://localhost:3107',
     rabbitmq: { url: required('RABBITMQ_URL') },
     internalSecret: required('INTERNAL_SERVICE_SECRET'),
@@ -135,6 +139,9 @@ export function loadConfig(): IdentityConfig {
     }
     if (/dev-only|change-me/i.test(config.jwt.refreshSecret)) {
       throw new ConfigError('JWT_REFRESH_SECRET still holds a development placeholder');
+    }
+    if (config.staffPasswordLogin) {
+      throw new ConfigError('STAFF_PASSWORD_LOGIN must be off in production: staff use TCB sign-in');
     }
     if (config.otp.fixedCode !== null) {
       throw new ConfigError('OTP_FIXED_CODE must not be set in production');

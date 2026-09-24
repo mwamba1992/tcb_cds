@@ -47,7 +47,8 @@ export class InternalController {
       where: { id },
       select: { id: true, phoneNumber: true, locale: true },
     });
-    if (!account) throw new NotFoundException('Account not found');
+    // Staff accounts may have no phone; for a caller that means nowhere to send.
+    if (!account?.phoneNumber) throw new NotFoundException('Account not found');
     return { accountId: account.id, phoneNumber: account.phoneNumber, locale: account.locale };
   }
 

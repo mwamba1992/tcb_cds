@@ -10,6 +10,7 @@ import {
   RefreshDto,
   SetPinDto,
   SignInDto,
+  StaffSignInDto,
   StartPinResetDto,
   StartRegistrationDto,
   StepUpDto,
@@ -52,6 +53,14 @@ export class AuthController {
   @ApiResponse({ status: 423, description: 'pin_locked: reset the PIN by OTP' })
   async signIn(@Body() dto: SignInDto, @Req() request: Request) {
     return tokens(await this.auth.signIn(dto, deviceOf(request)));
+  }
+
+  @Public()
+  @Post('staff/login')
+  @HttpCode(HttpStatus.OK)
+  @ApiOperation({ summary: 'Development only: staff sign-in by username and password' })
+  async staffSignIn(@Body() dto: StaffSignInDto, @Req() request: Request) {
+    return tokens(await this.auth.staffSignIn(dto, deviceOf(request)));
   }
 
   @Public()

@@ -20,6 +20,8 @@ export interface AccessTokenClaims extends BaseClaims {
   /** Session id, so revoking a session invalidates its refresh chain. */
   sid: string;
   phoneVerified: boolean;
+  /** Staff only: the name recorded against their decisions. */
+  name?: string;
 }
 
 export interface RefreshTokenClaims extends BaseClaims {
@@ -51,6 +53,8 @@ export interface AuthenticatedUser {
   sessionId: string;
   phoneVerified: boolean;
   permissions: readonly Permission[];
+  /** Staff only. */
+  name?: string;
 }
 
 export function isAccessTokenClaims(claims: GovsecTokenClaims): claims is AccessTokenClaims {

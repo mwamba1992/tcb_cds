@@ -95,3 +95,15 @@ export class StepUpDto {
   @Matches(/^\d{1,15}(\.\d{1,2})?$/, { message: 'amount must be a decimal string like 5000000.00' })
   amount?: string;
 }
+
+export class StaffSignInDto {
+  @ApiProperty({ example: 'rose.mollel' })
+  @IsString()
+  @Length(2, 60)
+  username!: string;
+
+  @ApiProperty()
+  @IsString()
+  @Length(1, 200)
+  password!: string;
+}

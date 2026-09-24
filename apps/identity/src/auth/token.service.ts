@@ -34,6 +34,8 @@ export class TokenService {
     role: Role;
     sessionId: string;
     phoneVerified: boolean;
+    /** Staff only. */
+    name?: string | null;
   }): Promise<IssuedTokenPair> {
     const { jwt } = this.config;
     const [accessToken, refreshToken] = await Promise.all([
@@ -43,6 +45,7 @@ export class TokenService {
           role: input.role,
           sid: input.sessionId,
           phoneVerified: input.phoneVerified,
+          ...(input.name ? { name: input.name } : {}),
         },
         {
           subject: input.accountId,

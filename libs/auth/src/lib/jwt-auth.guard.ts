@@ -84,6 +84,7 @@ export class JwtAuthGuard implements CanActivate {
       sessionId: claims.sid,
       phoneVerified: claims.phoneVerified,
       permissions,
+      ...(typeof claims.name === 'string' ? { name: claims.name } : {}),
     };
     request.user = user;
 
