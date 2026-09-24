@@ -1,5 +1,7 @@
 import { Injectable } from '@nestjs/common';
 import type { BotBatchSubmittedPayload } from '@govsec/events';
+import type { Prisma } from '../generated/prisma/client';
+import type { OutgoingPackage } from '../bot/bot.service';
 import { outboxRow } from '../outbox/outbox.store';
 import { PrismaService } from '../prisma/prisma.service';
 import {
@@ -22,6 +24,7 @@ export class PrismaSubmissionStore implements SubmissionStore {
       totalFaceValue: row.totalFaceValue.toFixed(2),
       alreadySubmitted: row.alreadySubmitted,
       requestedBy: row.requestedBy,
+      packages: row.packages as unknown as OutgoingPackage[],
     };
   }
 
@@ -34,6 +37,7 @@ export class PrismaSubmissionStore implements SubmissionStore {
           bidsSubmitted: record.bidsSubmitted,
           totalFaceValue: record.totalFaceValue,
           alreadySubmitted: record.alreadySubmitted,
+          packages: record.packages as unknown as Prisma.InputJsonValue,
         },
       }),
       this.prisma.outboxMessage.create({

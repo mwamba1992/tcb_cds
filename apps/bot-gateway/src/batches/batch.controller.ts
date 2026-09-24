@@ -1,4 +1,4 @@
-import { Body, Controller, HttpException, HttpStatus, Param, Post } from '@nestjs/common';
+import { Body, Controller, Param, Post } from '@nestjs/common';
 import { ApiOperation, ApiProperty, ApiTags } from '@nestjs/swagger';
 import { InternalOnly, Public } from '@govsec/auth';
 import { Type } from 'class-transformer';
@@ -12,8 +12,7 @@ import {
   Matches,
   ValidateNested,
 } from 'class-validator';
-import { BotApiError } from '../bot/bot-transport';
-import { BotValidationError } from '../bot/bot.service';
+import { toHttp } from '../bot/http-errors';
 import { BatchSubmissionService } from './batch-submission.service';
 
 class BidDto {
@@ -90,35 +89,11 @@ export class BatchController {
         })),
         'auction',
       );
-      return { ...submission, replayed };
+      // The packages stay in gateway's records; the caller already has them.
+      const { packages: _packages, ...summary } = submission;
+      return { ...summary, replayed };
     } catch (error) {
       throw toHttp(error);
     }
   }
-}
-
-/**
- * BoT's answers mapped for the caller: our own validation and BoT's 4xx are the
- * request's fault (422, or 409 for a cut-off); BoT being down or refusing our
- * credentials is not the caller's fault and is a 502 it may retry.
- */
-function toHttp(error: unknown): HttpException {
-  if (error instanceof BotValidationError) {
-    return new HttpException(
-      { code: 'INVALID_BATCH', message: error.message },
-      HttpStatus.UNPROCESSABLE_ENTITY,
-    );
-  }
-  if (error instanceof BotApiError) {
-    const body = { code: error.code, message: error.message, botStatus: error.status };
-    if (error.status === 409) return new HttpException(body, HttpStatus.CONFLICT);
-    if (error.status >= 400 && error.status < 500 && error.status !== 401) {
-      return new HttpException(body, HttpStatus.UNPROCESSABLE_ENTITY);
-    }
-    return new HttpException(body, HttpStatus.BAD_GATEWAY);
-  }
-  return new HttpException(
-    { code: 'INTERNAL', message: 'Batch submission failed' },
-    HttpStatus.INTERNAL_SERVER_ERROR,
-  );
 }

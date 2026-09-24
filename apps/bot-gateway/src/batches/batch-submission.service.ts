@@ -12,6 +12,8 @@ import type { BatchSubmission, BotService, OutgoingPackage } from '../bot/bot.se
 
 export interface SubmissionRecord extends BatchSubmission {
   requestedBy: string;
+  /** Exactly what was sent, for reconciliation against what BoT holds. */
+  packages: OutgoingPackage[];
 }
 
 export interface SubmissionStore {
@@ -35,7 +37,7 @@ export class BatchSubmissionService {
     if (existing) return { submission: existing, replayed: true };
 
     const result = await this.bot.submitBatch(batchReference, packages);
-    const record: SubmissionRecord = { ...result, requestedBy };
+    const record: SubmissionRecord = { ...result, requestedBy, packages };
     await this.store.save(record, {
       batchReference: record.batchReference,
       bidsSubmitted: record.bidsSubmitted,

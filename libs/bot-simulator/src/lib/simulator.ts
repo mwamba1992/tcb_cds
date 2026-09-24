@@ -514,6 +514,17 @@ export class BotSimulator {
 
   private listBids(participant: SimParticipant, isin: string, url: URL) {
     const q = url.searchParams;
+    const limit = Number(q.get('limit') ?? 20);
+    const page = Number(q.get('page') ?? 1);
+    if (
+      !Number.isInteger(limit) ||
+      limit < 1 ||
+      limit > 100 ||
+      !Number.isInteger(page) ||
+      page < 1
+    ) {
+      throw new SimError(400, 'INVALID_QUERY', 'page must be ≥ 1 and limit 1–100');
+    }
     return this.bids
       .filter((b) => b.ISIN === isin && b.participant === participant.username)
       .filter((b) => !q.get('requestId') || b.requestId === q.get('requestId'))
@@ -521,6 +532,7 @@ export class BotSimulator {
       .filter((b) => !q.get('securityAccount') || b.securityAccount === q.get('securityAccount'))
       .filter((b) => !q.get('action') || b.action === q.get('action'))
       .filter((b) => !q.get('competitive') || b.competitive === q.get('competitive'))
+      .slice((page - 1) * limit, page * limit)
       .map((b) => ({
         ISIN: b.ISIN,
         investor: participant.displayName,

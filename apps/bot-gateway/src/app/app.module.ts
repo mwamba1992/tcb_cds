@@ -9,6 +9,7 @@ import { AuctionSyncScheduler } from '../auctions/auction-sync.scheduler';
 import { AuctionSyncService } from '../auctions/auction-sync.service';
 import { PrismaSnapshotStore } from '../auctions/prisma-snapshot.store';
 import { BatchController } from '../batches/batch.controller';
+import { BidsController } from '../bids/bids.controller';
 import { BatchSubmissionService } from '../batches/batch-submission.service';
 import { PrismaSubmissionStore } from '../batches/prisma-submission.store';
 import { botServiceProvider } from '../bot/bot.providers';
@@ -21,6 +22,11 @@ import { CONFIG, loadConfig, type BotGatewayConfig } from '../config/configurati
 import { HealthController } from '../health/health.controller';
 import { BotGatewayOutboxStore } from '../outbox/outbox.store';
 import { PrismaModule } from '../prisma/prisma.module';
+import { PrismaReconcileStore } from '../reconciliation/prisma-reconcile.store';
+import { PrismaWinnersStore } from '../reconciliation/prisma-winners.store';
+import { ReconciliationScheduler } from '../reconciliation/reconciliation.scheduler';
+import { SubmissionReconciler } from '../reconciliation/submission-reconciler';
+import { WinnersCheck } from '../reconciliation/winners-check';
 
 const bootConfig = loadConfig();
 
@@ -58,7 +64,7 @@ function readBotPublicKey(path: string | undefined): string | null {
       inject: [CONFIG],
     }),
   ],
-  controllers: [HealthController, CallbackController, BatchController],
+  controllers: [HealthController, CallbackController, BatchController, BidsController],
   providers: [
     {
       provide: APP_GUARD,
@@ -86,6 +92,21 @@ function readBotPublicKey(path: string | undefined): string | null {
     },
     AuctionSyncScheduler,
     PrismaSubmissionStore,
+    PrismaReconcileStore,
+    {
+      provide: SubmissionReconciler,
+      useFactory: (bot: BotService, store: PrismaReconcileStore) =>
+        new SubmissionReconciler(bot, store),
+      inject: [BotService, PrismaReconcileStore],
+    },
+    PrismaWinnersStore,
+    {
+      provide: WinnersCheck,
+      useFactory: (bot: BotService, store: PrismaWinnersStore, config: BotGatewayConfig) =>
+        new WinnersCheck(bot, store, config.bot.investorName),
+      inject: [BotService, PrismaWinnersStore, CONFIG],
+    },
+    ReconciliationScheduler,
     {
       provide: BatchSubmissionService,
       useFactory: (bot: BotService, store: PrismaSubmissionStore) =>

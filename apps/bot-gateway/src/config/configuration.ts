@@ -33,6 +33,12 @@ export interface BotGatewayConfig {
     botPublicKeyPath?: string;
     /** How often to poll GET /auctions, in ms; 0 disables the sync. */
     auctionSyncMs: number;
+    /** How often to check submitted batches against GET /bids, in ms; 0 disables. */
+    reconcileMs: number;
+    /** How often to cross-check allotments against /winners, in ms; 0 disables. */
+    winnersCheckMs: number;
+    /** The name BoT shows for TCB as `investor` on /winners (Appendix B, B1). */
+    investorName: string;
   };
 }
 
@@ -96,6 +102,9 @@ export function loadConfig(): BotGatewayConfig {
       privateKeyPath: optional('BOT_PRIVATE_KEY_PATH'),
       botPublicKeyPath: optional('BOT_PUBLIC_KEY_PATH'),
       auctionSyncMs: optionalNumber('BOT_AUCTION_SYNC_MS', 300_000),
+      reconcileMs: optionalNumber('BOT_RECONCILE_MS', 60_000),
+      winnersCheckMs: optionalNumber('BOT_WINNERS_CHECK_MS', 300_000),
+      investorName: optional('BOT_INVESTOR_NAME') ?? 'TANZANIA COMMERCIAL BANK',
     },
   };
 

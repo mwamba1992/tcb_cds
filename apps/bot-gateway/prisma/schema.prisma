@@ -74,6 +74,28 @@ model BatchSubmission {
   totalFaceValue   Decimal  @map("total_face_value") @db.Decimal(20, 2)
   alreadySubmitted Boolean  @map("already_submitted")
   submittedAt      DateTime @default(now()) @map("submitted_at") @db.Timestamptz(6)
+  /// Exactly what was sent, so the batch can be checked against what BoT holds.
+  packages         Json     @default("[]")
+  /// pending until BoT is confirmed to hold every bid; then matched, or breaks.
+  reconcileStatus  String   @default("pending") @map("reconcile_status") @db.VarChar(20)
+  reconcileAttempts Int     @default(0) @map("reconcile_attempts")
+  reconciledAt     DateTime? @map("reconciled_at") @db.Timestamptz(6)
+  breaks           Json?
 
+  @@index([reconcileStatus, submittedAt])
   @@map("batch_submissions")
+}
+
+/// Cross-check of allotments received by callback against BoT's /winners totals, per
+/// ISIN. /winners cannot say whose allotment is whose (Appendix B, B1), so totals are
+/// the one thing it can confirm.
+model WinnersCheck {
+  isin           String   @id @db.VarChar(12)
+  status         String   @db.VarChar(20)
+  callbacksTotal Decimal  @map("callbacks_total") @db.Decimal(20, 2)
+  winnersTotal   Decimal  @map("winners_total") @db.Decimal(20, 2)
+  attempts       Int      @default(1)
+  checkedAt      DateTime @default(now()) @map("checked_at") @db.Timestamptz(6)
+
+  @@map("winners_checks")
 }
