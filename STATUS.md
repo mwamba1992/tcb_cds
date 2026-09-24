@@ -1,6 +1,6 @@
 # GovSec — Project Status
 
-**Last updated:** 2026-09-24 · **Current milestone:** M0 → M1 · **Next:** investor onboarding and KYC (registration journey, part 3)
+**Last updated:** 2026-09-24 · **Current milestone:** M0 → M1 · **Next:** portal registration and sign-in screens on the real API (registration journey, part 4)
 
 ## At a glance
 
@@ -8,9 +8,9 @@
 | ------------------- | ------------------------------------------------------------------------------------------- |
 | Services scaffolded | **7 of 7**: identity, investor, auction, bot-gateway, cbs-gateway, settlement, notification |
 | Shared libraries    | 9: money, events, outbox, auth, settings, notify, reference, pagination, bot-client         |
-| Domain endpoints    | bot-gateway (BoT leg), notification (SMS), identity (investor sign-up and sign-in)          |
-| Unit tests          | 174, all passing                                                                            |
-| Migrations          | 11                                                                                          |
+| Domain endpoints    | bot-gateway, notification, identity, investor (onboarding, KYC, CDS), cbs-gateway (stub)    |
+| Unit tests          | 194, all passing                                                                            |
+| Migrations          | 13                                                                                          |
 | CI                  | lint · test · typecheck · build, against real Postgres and RabbitMQ                         |
 
 Every service builds, boots, connects to its own schema and to RabbitMQ, and answers
@@ -65,6 +65,30 @@ Every service builds, boots, connects to its own schema and to RabbitMQ, and ans
   suspicious. No phone numbers or credentials in any payload.
 - Development: `OTP_FIXED_CODE=123456` (refused in production).
 - Not yet: staff sign-in (next round, with the back-office KYC screen), device binding.
+
+## investor + cbs-gateway (onboarding and KYC)
+
+- Individual investors: details → consents (versioned) → submit. The model carries
+  `type` for corporate, joint and minor investors, which add a profile table each.
+- At submission: NIDA check (declared vs registry), Core Banking check (NIDA vs CBS
+  record, account ownership), sanctions and PEP screening, then a risk rating with
+  its reasons. All clear and low risk → approved straight through; anything else →
+  a KYC case. An unreachable source is never treated as clear.
+- One NIDA number, one investor.
+- KYC queue with maker-checker: officer approves / requests info / rejects;
+  a *different* supervisor or compliance officer confirms or returns. Proven live,
+  including a compliance officer refused on their own recommendation.
+- On approval: a CDS request for the back office (BoT has no CDS API), and for a
+  new-to-bank investor an account-opening request to Core Banking; the investor
+  carries on. `cbs.account.opened` links the new account. `canBid` needs KYC
+  approved, CDS account recorded and a TCB account.
+- CDS account numbers are unique across investors.
+- SMS at each step (submitted, under review, approved, rejected, CDS open), phone
+  fetched from identity at send time. `investor.*` events carry ids only.
+- Stubs until TCB provides access: NIDA, sanctions/PEP lists, Core Banking
+  (`NIDA_MODE`, `SCREENING_MODE`, `CBS_MODE`; production refuses all three stubs).
+  Stub fixtures: Asha (clean), Juma (name held abbreviated), Grace (PEP),
+  Ali (sanctions near-match); any other valid NIN is new to bank.
 
 ## bot-gateway (done against the simulator)
 

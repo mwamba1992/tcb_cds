@@ -32,3 +32,27 @@ model OutboxMessage {
   @@index([sentAt, id])
   @@map("outbox_messages")
 }
+
+/// A request to Core Banking to open a TCB account for a new-to-bank investor.
+///
+/// Kept here so the request survives a Core Banking outage and is sent exactly once;
+/// the investor carries on registering while it is processed.
+model AccountOpeningRequest {
+  id            String    @id @default(uuid()) @db.Uuid
+  /// AP-…
+  reference     String    @unique @db.VarChar(12)
+  /// One request per investor, so a retried submission cannot open two accounts.
+  investorId    String    @unique @map("investor_id") @db.Uuid
+  nidaNumber    String    @map("nida_number") @db.VarChar(20)
+  fullName      String    @map("full_name") @db.VarChar(200)
+  dateOfBirth   DateTime  @map("date_of_birth") @db.Date
+  /// requested | opened | refused
+  status        String    @default("requested") @db.VarChar(10)
+  customerId    String?   @map("customer_id") @db.VarChar(40)
+  accountNumber String?   @map("account_number") @db.VarChar(20)
+  requestedAt   DateTime  @default(now()) @map("requested_at") @db.Timestamptz(6)
+  openedAt      DateTime? @map("opened_at") @db.Timestamptz(6)
+
+  @@index([status])
+  @@map("account_opening_requests")
+}

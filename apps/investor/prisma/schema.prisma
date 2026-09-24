@@ -32,3 +32,158 @@ model OutboxMessage {
   @@index([sentAt, id])
   @@map("outbox_messages")
 }
+
+/// A person (or, later, a company, joint holding or minor) who holds or may hold
+/// Government securities through TCB. One per identity account.
+///
+/// `type` is here from the start so corporate, joint and minor investors add a
+/// profile table each rather than reshaping this one. Only `individual` is accepted
+/// today.
+model Investor {
+  id                String    @id @default(uuid()) @db.Uuid
+  /// The investor's own number (NV-…), quoted at a branch or to the contact centre.
+  reference         String    @unique @db.VarChar(12)
+  /// identity.accounts.id — the person who signs in. Not a foreign key: another schema.
+  accountId         String    @unique @map("account_id") @db.Uuid
+  /// individual | corporate | joint | minor
+  type              String    @default("individual") @db.VarChar(12)
+  /// draft | under_review | info_requested | approved | rejected
+  status            String    @default("draft") @db.VarChar(20)
+  /// low | medium | high, set at submission.
+  risk              String?   @db.VarChar(8)
+  /// web | mobile | ussd | chatbot | branch
+  channel           String    @default("web") @db.VarChar(10)
+  /// existing | requested | opened — the TCB account that funds bids and receives payouts.
+  bankStatus        String?   @map("bank_status") @db.VarChar(10)
+  cbsCustomerId     String?   @map("cbs_customer_id") @db.VarChar(40)
+  bankAccount       String?   @map("bank_account") @db.VarChar(20)
+  accountOpeningRef String?   @map("account_opening_ref") @db.VarChar(12)
+  /// none | requested | active
+  cdsStatus         String    @default("none") @map("cds_status") @db.VarChar(10)
+  cdsAccount        String?   @unique @map("cds_account") @db.VarChar(20)
+  submittedAt       DateTime? @map("submitted_at") @db.Timestamptz(6)
+  approvedAt        DateTime? @map("approved_at") @db.Timestamptz(6)
+  createdAt         DateTime  @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt         DateTime  @updatedAt @map("updated_at") @db.Timestamptz(6)
+
+  individual    IndividualProfile?
+  consents      Consent[]
+  verifications Verification[]
+  kycCases      KycCase[]
+  cdsRequests   CdsRequest[]
+
+  @@index([status])
+  @@map("investors")
+}
+
+/// What an individual declared, as they declared it. Verified values from NIDA and
+/// Core Banking are kept in `verifications`, never written over these.
+model IndividualProfile {
+  investorId      String   @id @map("investor_id") @db.Uuid
+  /// 20 digits, stored without separators.
+  nidaNumber      String   @unique @map("nida_number") @db.VarChar(20)
+  firstName       String   @map("first_name") @db.VarChar(60)
+  middleName      String?  @map("middle_name") @db.VarChar(60)
+  lastName        String   @map("last_name") @db.VarChar(60)
+  dateOfBirth     DateTime @map("date_of_birth") @db.Date
+  gender          String   @db.VarChar(1)
+  email           String?  @db.VarChar(120)
+  region          String   @db.VarChar(40)
+  district        String   @db.VarChar(60)
+  address         String   @db.VarChar(200)
+  occupation      String   @db.VarChar(60)
+  /// salary | business | savings | pension | inheritance | other
+  sourceOfFunds   String   @map("source_of_funds") @db.VarChar(20)
+  tin             String?  @db.VarChar(11)
+  /// Holds, or is close to someone who holds, a prominent public function.
+  pepDeclared     Boolean  @map("pep_declared")
+  /// The TCB account the investor says is theirs; checked against Core Banking.
+  declaredAccount String?  @map("declared_account") @db.VarChar(20)
+  updatedAt       DateTime @updatedAt @map("updated_at") @db.Timestamptz(6)
+
+  investor Investor @relation(fields: [investorId], references: [id])
+
+  @@map("individual_profiles")
+}
+
+/// Terms the investor accepted, by version, so a later change of wording never
+/// rewrites what they agreed to.
+model Consent {
+  id         String   @id @default(uuid()) @db.Uuid
+  investorId String   @map("investor_id") @db.Uuid
+  /// terms | data_processing | cds_mandate
+  kind       String   @db.VarChar(20)
+  version    String   @db.VarChar(20)
+  ipAddress  String?  @map("ip_address") @db.VarChar(64)
+  acceptedAt DateTime @default(now()) @map("accepted_at") @db.Timestamptz(6)
+
+  investor Investor @relation(fields: [investorId], references: [id])
+
+  @@unique([investorId, kind, version])
+  @@map("consents")
+}
+
+/// One check against an outside source at submission.
+model Verification {
+  id         String   @id @default(uuid()) @db.Uuid
+  investorId String   @map("investor_id") @db.Uuid
+  /// nida | cbs | sanctions | pep
+  source     String   @db.VarChar(12)
+  /// clear | review | fail | unavailable
+  outcome    String   @db.VarChar(12)
+  /// Field comparisons or screening hits, for the reviewer.
+  details    Json
+  checkedAt  DateTime @default(now()) @map("checked_at") @db.Timestamptz(6)
+
+  investor Investor @relation(fields: [investorId], references: [id])
+
+  @@index([investorId, checkedAt])
+  @@map("verifications")
+}
+
+/// A submission a person must decide, with maker-checker: an officer recommends,
+/// a different supervisor or compliance officer confirms.
+model KycCase {
+  id          String    @id @default(uuid()) @db.Uuid
+  reference   String    @unique @db.VarChar(12)
+  investorId  String    @map("investor_id") @db.Uuid
+  /// Why a person has to look: the checks that did not come back clear.
+  reasons     String[]
+  risk        String    @db.VarChar(8)
+  /// new | info_requested | awaiting_checker | returned | approved | rejected
+  status      String    @default("new") @db.VarChar(20)
+  makerId     String?   @map("maker_id") @db.Uuid
+  makerAction String?   @map("maker_action") @db.VarChar(20)
+  makerNote   String?   @map("maker_note") @db.VarChar(500)
+  makerAt     DateTime? @map("maker_at") @db.Timestamptz(6)
+  checkerId   String?   @map("checker_id") @db.Uuid
+  checkerNote String?   @map("checker_note") @db.VarChar(500)
+  checkerAt   DateTime? @map("checker_at") @db.Timestamptz(6)
+  slaDueAt    DateTime  @map("sla_due_at") @db.Timestamptz(6)
+  openedAt    DateTime  @default(now()) @map("opened_at") @db.Timestamptz(6)
+  closedAt    DateTime? @map("closed_at") @db.Timestamptz(6)
+
+  investor Investor @relation(fields: [investorId], references: [id])
+
+  @@index([status, openedAt])
+  @@map("kyc_cases")
+}
+
+/// A back-office task: open the investor's account at the CDS and record its number.
+/// BoT publishes no CDS API (TAD Appendix B), so this is done by hand until it does.
+model CdsRequest {
+  id          String    @id @default(uuid()) @db.Uuid
+  reference   String    @unique @db.VarChar(12)
+  investorId  String    @unique @map("investor_id") @db.Uuid
+  /// pending | completed
+  status      String    @default("pending") @db.VarChar(10)
+  cdsAccount  String?   @map("cds_account") @db.VarChar(20)
+  completedBy String?   @map("completed_by") @db.Uuid
+  completedAt DateTime? @map("completed_at") @db.Timestamptz(6)
+  createdAt   DateTime  @default(now()) @map("created_at") @db.Timestamptz(6)
+
+  investor Investor @relation(fields: [investorId], references: [id])
+
+  @@index([status, createdAt])
+  @@map("cds_requests")
+}

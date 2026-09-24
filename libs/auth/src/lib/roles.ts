@@ -46,6 +46,8 @@ export const PERMISSIONS = {
   // KYC
   kycReview: 'kyc:review',
   kycDecide: 'kyc:decide',
+  /** Record the CDS account opened for an approved investor. */
+  cdsOpen: 'cds:open',
   // auction operations — maker and checker are separate permissions on purpose
   auctionManage: 'auction:manage',
   bidReadAll: 'bid:read:all',
@@ -78,6 +80,7 @@ const OPS_OFFICER_PERMISSIONS: readonly Permission[] = [
   PERMISSIONS.auctionRead,
   PERMISSIONS.bidReadAll,
   PERMISSIONS.kycReview,
+  PERMISSIONS.cdsOpen,
   PERMISSIONS.auctionManage,
   PERMISSIONS.batchPrepare,
   PERMISSIONS.reportRead,

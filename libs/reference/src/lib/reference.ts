@@ -59,6 +59,12 @@ export const REFERENCE_PREFIX = {
   complaint: 'CS',
   /** The investor's own number, quoted at a branch or to the contact centre. */
   investor: 'NV',
+  /** A KYC review case in the back office. */
+  kycCase: 'KY',
+  /** A request to open a CDS account for an approved investor. */
+  cdsRequest: 'CD',
+  /** A request to Core Banking to open a TCB account for a new-to-bank investor. */
+  accountOpening: 'AP',
 } as const;
 
 export type ReferenceKind = keyof typeof REFERENCE_PREFIX;

@@ -15,6 +15,16 @@ export interface InvestorConfig {
   rabbitmq: { url: string };
   internalSecret: string;
   outbox: { pollIntervalMs: number; batchSize: number };
+  services: { identityUrl: string; cbsGatewayUrl: string; notificationUrl: string };
+  /** `stub` until TCB's NIDA and screening subscriptions are available. */
+  nidaMode: 'stub' | 'live';
+  screeningMode: 'stub' | 'live';
+  kyc: {
+    /** Hours the back office has to decide a case. */
+    slaHours: number;
+    /** The consent wording in force; accepted versions are stored per investor. */
+    consentVersion: string;
+  };
 }
 
 class ConfigError extends Error {
@@ -64,7 +74,22 @@ export function loadConfig(): InvestorConfig {
       pollIntervalMs: optionalNumber('OUTBOX_POLL_INTERVAL_MS', 1000),
       batchSize: optionalNumber('OUTBOX_BATCH_SIZE', 100),
     },
+    services: {
+      identityUrl: optional('IDENTITY_URL') ?? 'http://localhost:3101',
+      cbsGatewayUrl: optional('CBS_GATEWAY_URL') ?? 'http://localhost:3105',
+      notificationUrl: optional('NOTIFICATION_URL') ?? 'http://localhost:3107',
+    },
+    nidaMode: optional('NIDA_MODE') === 'live' ? 'live' : 'stub',
+    screeningMode: optional('SCREENING_MODE') === 'live' ? 'live' : 'stub',
+    kyc: {
+      slaHours: optionalNumber('KYC_SLA_HOURS', 24),
+      consentVersion: optional('CONSENT_VERSION') ?? '2026-09',
+    },
   };
+
+  if (nodeEnv === 'production' && (config.nidaMode !== 'live' || config.screeningMode !== 'live')) {
+    throw new ConfigError('NIDA_MODE and SCREENING_MODE must be live in production');
+  }
 
   if (nodeEnv === 'production') {
     if (!rs256) {
