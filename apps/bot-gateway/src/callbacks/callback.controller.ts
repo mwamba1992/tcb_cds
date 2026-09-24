@@ -1,4 +1,4 @@
-import { Controller, HttpCode, Post, Req, Res, type RawBodyRequest } from '@nestjs/common';
+import { Controller, HttpCode, Logger, Post, Req, Res, type RawBodyRequest } from '@nestjs/common';
 import { ApiExcludeController } from '@nestjs/swagger';
 import { Public } from '@govsec/auth';
 import { botTimestamp } from '@govsec/bot-client';
@@ -16,6 +16,8 @@ import { CallbackService } from './callback.service';
 @ApiExcludeController()
 @Controller('bot')
 export class CallbackController {
+  private readonly logger = new Logger(CallbackController.name);
+
   constructor(private readonly callbacks: CallbackService) {}
 
   @Public()
@@ -35,6 +37,8 @@ export class CallbackController {
 
     const timestamp = botTimestamp();
     if (outcome.kind === 'rejected') {
+      // A refused callback is either misconfiguration or someone who is not BoT.
+      this.logger.warn(`Refused callback from ${req.ip}: ${outcome.code}`);
       res
         .status(outcome.status)
         .json({ status: 'error', code: outcome.code, message: outcome.message, timestamp });

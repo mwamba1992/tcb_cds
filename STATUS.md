@@ -57,6 +57,19 @@ Every service builds, boots, connects to its own schema and to RabbitMQ, and ans
   accepted/rejected/allotted/unsuccessful.
 - Proven live: submission, replay, a refused caller, a refused forged callback, an
   auction close with 6 signed callbacks, and 10 events published to RabbitMQ.
+- Bid query and amend for the auction service (no cancel: BoT has none, B3).
+- Submission reconciliation every minute (missing, unexpected and rejected bids are
+  found before cut-off) and a winners cross-check every 5 minutes (B1).
+- Audit log of every BoT exchange (metadata only), a clock-skew guard from BoT's
+  Date header, and BoT's link state in `/readyz`.
+
+### bot-gateway: what only BoT or TCB can unblock
+
+- Sandbox credentials and IP allow-list, then a test run against the real sandbox.
+- BoT's answers to Appendix B (B1, B3, B5, B6 especially) and the exact `investor`
+  name BoT shows for TCB on /winners (`BOT_INVESTOR_NAME`).
+- TCB's HSM product, to replace the PEM signer in production.
+- Retention period for `bot_request_log` (TCB records policy), then a purge job.
 
 ## Next up
 

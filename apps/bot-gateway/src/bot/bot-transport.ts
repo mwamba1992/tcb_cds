@@ -1,4 +1,5 @@
 import { botTimestamp, canonicalString, type RequestSigner } from '@govsec/bot-client';
+import { batchReferenceFrom, skewFromDateHeader, type BotExchangeObserver } from './bot-observer';
 
 /**
  * One signed HTTP exchange with the BoT GSS API (spec §2, TAD §7.3).
@@ -51,6 +52,8 @@ export class BotApiError extends Error {
 
 export interface TransportOptions {
   timeoutMs?: number;
+  /** Told about every exchange: audit log, health, clock skew. */
+  observer?: BotExchangeObserver;
   fetchImpl?: typeof fetch;
   now?: () => Date;
 }
@@ -59,6 +62,7 @@ export class BotTransport {
   private readonly timeoutMs: number;
   private readonly fetchImpl: typeof fetch;
   private readonly now: () => Date;
+  private readonly observer: BotExchangeObserver | null;
 
   constructor(
     private readonly credentials: BotCredentials,
@@ -68,6 +72,7 @@ export class BotTransport {
     this.timeoutMs = options.timeoutMs ?? 15_000;
     this.fetchImpl = options.fetchImpl ?? fetch;
     this.now = options.now ?? (() => new Date());
+    this.observer = options.observer ?? null;
   }
 
   get username(): string {
@@ -83,6 +88,19 @@ export class BotTransport {
     const signature = await this.signer.sign(
       canonicalString({ method: request.method, pathAndQuery, timestamp, body }),
     );
+
+    const started = Date.now();
+    const report = (status: number, errorCode: string | null, dateHeader: string | null) =>
+      this.observer?.onExchange({
+        at: new Date(started),
+        method: request.method,
+        path: target.pathname,
+        status,
+        durationMs: Date.now() - started,
+        errorCode,
+        batchReference: batchReferenceFrom(target.pathname),
+        clockSkewSeconds: skewFromDateHeader(dateHeader, this.now()),
+      });
 
     let response: Response;
     try {
@@ -103,20 +121,25 @@ export class BotTransport {
       });
     } catch (error) {
       const reason = error instanceof Error ? error.message : String(error);
+      report(0, 'NETWORK_ERROR', null);
       throw new BotApiError(0, 'NETWORK_ERROR', `BoT unreachable: ${reason}`, target.pathname);
     }
 
     const text = await response.text();
     const parsed = parseJson(text);
+    const dateHeader = response.headers.get('date');
     if (!response.ok) {
       const detail = (parsed ?? {}) as { code?: unknown; message?: unknown };
+      const code = typeof detail.code === 'string' ? detail.code : `HTTP_${response.status}`;
+      report(response.status, code, dateHeader);
       throw new BotApiError(
         response.status,
-        typeof detail.code === 'string' ? detail.code : `HTTP_${response.status}`,
+        code,
         typeof detail.message === 'string' ? detail.message : `BoT answered ${response.status}`,
         target.pathname,
       );
     }
+    report(response.status, null, dateHeader);
     return { status: response.status, body: parsed };
   }
 }

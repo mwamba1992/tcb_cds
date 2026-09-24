@@ -12,7 +12,8 @@ import { BatchController } from '../batches/batch.controller';
 import { BidsController } from '../bids/bids.controller';
 import { BatchSubmissionService } from '../batches/batch-submission.service';
 import { PrismaSubmissionStore } from '../batches/prisma-submission.store';
-import { botServiceProvider } from '../bot/bot.providers';
+import { botHealthProvider, botServiceProvider } from '../bot/bot.providers';
+import { PrismaAuditWriter } from '../bot/prisma-audit.writer';
 import { BotService } from '../bot/bot.service';
 import { CallbackController } from '../callbacks/callback.controller';
 import { CallbackService } from '../callbacks/callback.service';
@@ -75,6 +76,8 @@ function readBotPublicKey(path: string | undefined): string | null {
         }),
       inject: [Reflector],
     },
+    botHealthProvider,
+    PrismaAuditWriter,
     botServiceProvider,
     PrismaCallbackStore,
     {

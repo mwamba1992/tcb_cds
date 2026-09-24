@@ -4,7 +4,10 @@ import { PemRequestSigner } from '@govsec/bot-client';
 import { CONFIG, type BotGatewayConfig } from '../config/configuration';
 import { BotApiClient } from './bot-api.client';
 import { BotTokenManager } from './bot-token.manager';
+import { BotHealth } from './bot-health';
+import { observers, type BotExchangeObserver } from './bot-observer';
 import { BotApiError, BotTransport } from './bot-transport';
+import { PrismaAuditWriter } from './prisma-audit.writer';
 import { BotService } from './bot.service';
 
 const logger = new Logger('BotConnection');
@@ -19,7 +22,11 @@ const logger = new Logger('BotConnection');
  * The signer reads a PEM key file, which is right for development and the BoT sandbox.
  * Production signs inside the HSM behind the same RequestSigner interface (TAD §10.1).
  */
-export function buildBotService(bot: BotGatewayConfig['bot']): BotService {
+export function buildBotService(
+  bot: BotGatewayConfig['bot'],
+  observer?: BotExchangeObserver,
+  health?: BotHealth,
+): BotService {
   const required = {
     BOT_API_KEY: bot.apiKey,
     BOT_INTERFACE_CODE: bot.interfaceCode,
@@ -34,8 +41,10 @@ export function buildBotService(bot: BotGatewayConfig['bot']): BotService {
     logger.warn(
       `BoT connection not configured (missing ${missing.join(', ')}); BoT calls will fail`,
     );
+    health?.setConfigured(false);
     return new BotService(notConfigured(missing));
   }
+  health?.setConfigured(true);
 
   const signer = new PemRequestSigner(readFileSync(bot.privateKeyPath ?? '', 'utf8'));
   const transport = new BotTransport(
@@ -47,6 +56,7 @@ export function buildBotService(bot: BotGatewayConfig['bot']): BotService {
       username: bot.username ?? '',
     },
     signer,
+    { observer },
   );
   logger.log(`BoT connection → ${bot.baseUrl} (${bot.environment})`);
   return new BotService(new BotApiClient(transport, new BotTokenManager(transport)));
@@ -65,8 +75,15 @@ function notConfigured(missing: string[]): BotApiClient {
   } as unknown as BotApiClient;
 }
 
+export const botHealthProvider: Provider = {
+  provide: BotHealth,
+  useFactory: () => new BotHealth(),
+};
+
+/** Every exchange goes to the health tracker (reachability, clock) and the audit log. */
 export const botServiceProvider: Provider = {
   provide: BotService,
-  useFactory: (config: BotGatewayConfig) => buildBotService(config.bot),
-  inject: [CONFIG],
+  useFactory: (config: BotGatewayConfig, health: BotHealth, audit: PrismaAuditWriter) =>
+    buildBotService(config.bot, observers(health, audit), health),
+  inject: [CONFIG, BotHealth, PrismaAuditWriter],
 };
