@@ -32,3 +32,90 @@ model OutboxMessage {
   @@index([sentAt, id])
   @@map("outbox_messages")
 }
+
+/// A person or staff member who can sign in.
+///
+/// Investors register with a phone number proved by OTP, then set a 4-digit PIN that
+/// both signs them in and approves bids (step-up). There is no password: the PIN is
+/// the knowledge factor and the phone the possession factor. Only argon2id hashes are
+/// stored.
+model Account {
+  id                String    @id @default(uuid()) @db.Uuid
+  /// E.164, e.g. +255712345678.
+  phoneNumber       String    @unique @map("phone_number") @db.VarChar(16)
+  role              String    @default("investor") @db.VarChar(40)
+  /// active | suspended | closed. A PIN lockout is separate (pinLockedAt), because it
+  /// is lifted by the account holder, not by staff.
+  status            String    @default("active") @db.VarChar(20)
+  phoneVerified     Boolean   @default(false) @map("phone_verified")
+  pinHash           String?   @map("pin_hash")
+  pinSetAt          DateTime? @map("pin_set_at") @db.Timestamptz(6)
+  /// Consecutive wrong PINs, across sign-in, step-up and PIN change.
+  pinFailedAttempts Int       @default(0) @map("pin_failed_attempts")
+  pinLockedAt       DateTime? @map("pin_locked_at") @db.Timestamptz(6)
+  /// sw | en. Kiswahili by default.
+  locale            String    @default("sw") @db.VarChar(2)
+  lastLoginAt       DateTime? @map("last_login_at") @db.Timestamptz(6)
+  createdAt         DateTime  @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt         DateTime  @updatedAt @map("updated_at") @db.Timestamptz(6)
+
+  sessions   Session[]
+  stepUps    StepUpGrant[]
+
+  @@map("accounts")
+}
+
+/// One refresh-token chain link. Rotation writes a successor and retires this row;
+/// presenting a retired token revokes every session of the account (replay).
+model Session {
+  id               String    @id @default(uuid()) @db.Uuid
+  accountId        String    @map("account_id") @db.Uuid
+  /// SHA-256 of the refresh token.
+  refreshTokenHash String    @unique @map("refresh_token_hash") @db.VarChar(80)
+  rotatedToId      String?   @map("rotated_to_id") @db.Uuid
+  ipAddress        String?   @map("ip_address") @db.VarChar(64)
+  userAgent        String?   @map("user_agent") @db.VarChar(300)
+  expiresAt        DateTime  @map("expires_at") @db.Timestamptz(6)
+  revokedAt        DateTime? @map("revoked_at") @db.Timestamptz(6)
+  createdAt        DateTime  @default(now()) @map("created_at") @db.Timestamptz(6)
+
+  account Account @relation(fields: [accountId], references: [id])
+
+  @@index([accountId, revokedAt])
+  @@map("sessions")
+}
+
+/// A one-time code sent by SMS. Keyed by phone, not account: a registration code is
+/// issued before the account exists.
+model OtpChallenge {
+  id          String    @id @default(uuid()) @db.Uuid
+  phoneNumber String    @map("phone_number") @db.VarChar(16)
+  /// registration | pin_reset
+  purpose     String    @db.VarChar(20)
+  codeHash    String    @map("code_hash")
+  attempts    Int       @default(0)
+  maxAttempts Int       @map("max_attempts")
+  expiresAt   DateTime  @map("expires_at") @db.Timestamptz(6)
+  consumedAt  DateTime? @map("consumed_at") @db.Timestamptz(6)
+  createdAt   DateTime  @default(now()) @map("created_at") @db.Timestamptz(6)
+
+  @@index([phoneNumber, purpose, createdAt])
+  @@map("otp_challenges")
+}
+
+/// A PIN approval for one action, redeemed once by the service that performs it.
+model StepUpGrant {
+  id         String    @id @db.Uuid
+  accountId  String    @map("account_id") @db.Uuid
+  scope      String    @db.VarChar(40)
+  /// Ceiling in TZS minor units, when the approval was for an amount.
+  maxAmount  BigInt?   @map("max_amount")
+  expiresAt  DateTime  @map("expires_at") @db.Timestamptz(6)
+  consumedAt DateTime? @map("consumed_at") @db.Timestamptz(6)
+  createdAt  DateTime  @default(now()) @map("created_at") @db.Timestamptz(6)
+
+  account Account @relation(fields: [accountId], references: [id])
+
+  @@index([accountId])
+  @@map("step_up_grants")
+}

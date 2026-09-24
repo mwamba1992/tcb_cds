@@ -1,6 +1,6 @@
 # GovSec — Project Status
 
-**Last updated:** 2026-09-24 · **Current milestone:** M0 → M1 · **Next:** auction service bidding endpoints
+**Last updated:** 2026-09-24 · **Current milestone:** M0 → M1 · **Next:** investor onboarding and KYC (registration journey, part 3)
 
 ## At a glance
 
@@ -8,9 +8,9 @@
 | ------------------- | ------------------------------------------------------------------------------------------- |
 | Services scaffolded | **7 of 7**: identity, investor, auction, bot-gateway, cbs-gateway, settlement, notification |
 | Shared libraries    | 9: money, events, outbox, auth, settings, notify, reference, pagination, bot-client         |
-| Domain endpoints    | 0 (health and readiness only)                                                               |
-| Unit tests          | 80, all passing                                                                             |
-| Migrations          | 7 (one initial migration per service schema)                                                |
+| Domain endpoints    | bot-gateway (BoT leg), notification (SMS), identity (investor sign-up and sign-in)          |
+| Unit tests          | 174, all passing                                                                            |
+| Migrations          | 11                                                                                          |
 | CI                  | lint · test · typecheck · build, against real Postgres and RabbitMQ                         |
 
 Every service builds, boots, connects to its own schema and to RabbitMQ, and answers
@@ -44,6 +44,27 @@ Every service builds, boots, connects to its own schema and to RabbitMQ, and ans
 | Core Banking API specification and test environment; confirmation of lien/hold support                                          | TCB ICT            | M1 stub → M4 live     |
 | Settlement mechanism to BoT (TISS aggregate vs GePG)                                                                            | TCB Treasury + BoT | M3                    |
 | Production hosting target (Kubernetes/OpenShift or VMs)                                                                         | TCB ICT            | Deployment packaging  |
+
+## identity (investor sign-up and sign-in)
+
+- Register: phone number → SMS code → account created and signed in → 4-digit PIN.
+  Accepts 0712…, 255712… and +255712…; stores E.164. No password: the PIN is the
+  knowledge factor, the phone the possession factor.
+- Sign in with phone + PIN. An unknown number and a wrong PIN answer identically, in
+  the same time.
+- Lockout after 5 wrong PINs (sign-in, step-up and PIN change count together):
+  sessions revoked, lifted only by a PIN reset with an SMS code. The attempt is
+  reserved before the PIN is compared, so 20 parallel guesses evaluate exactly 5.
+- PINs refused when repeated, sequential or common. Argon2id for PINs and codes.
+- SMS throttle per number: one code per 60 s, five per hour.
+- Refresh-token rotation; replay of a rotated token revokes every session and emits
+  `identity.login.suspicious`. Access 15 min, refresh 12 h.
+- Step-up: PIN → `pin_token` scoped to one permission and an optional TZS ceiling;
+  redeemed once by the performing service (`POST /internal/v1/step-up/redeem`).
+- Events on `govsec.identity`: account created, PIN set, account locked, login
+  suspicious. No phone numbers or credentials in any payload.
+- Development: `OTP_FIXED_CODE=123456` (refused in production).
+- Not yet: staff sign-in (next round, with the back-office KYC screen), device binding.
 
 ## bot-gateway (done against the simulator)
 

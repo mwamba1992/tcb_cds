@@ -3,7 +3,17 @@ import { Module } from '@nestjs/common';
 import { APP_GUARD, Reflector } from '@nestjs/core';
 import { GovsecAuthModule, ServiceAuthGuard } from '@govsec/auth';
 import { DEAD_LETTER_EXCHANGE, EXCHANGES } from '@govsec/events';
+import { NotifyClient } from '@govsec/notify';
 import { OutboxRelay, OUTBOX_OPTIONS, OUTBOX_STORE } from '@govsec/outbox';
+import { AuthController } from '../auth/auth.controller';
+import { AuthService } from '../auth/auth.service';
+import { InternalController } from '../auth/internal.controller';
+import { OtpService } from '../auth/otp.service';
+import { PinService } from '../auth/pin.service';
+import { SecretHasher } from '../auth/secret-hasher';
+import { SessionService } from '../auth/session.service';
+import { StepUpService } from '../auth/step-up.service';
+import { TokenService } from '../auth/token.service';
 import { IdentityConfigModule } from '../config/config.module';
 import { CONFIG, loadConfig, type IdentityConfig } from '../config/configuration';
 import { HealthController } from '../health/health.controller';
@@ -36,8 +46,25 @@ const bootConfig = loadConfig();
       inject: [CONFIG],
     }),
   ],
-  controllers: [HealthController],
+  controllers: [HealthController, AuthController, InternalController],
   providers: [
+    SecretHasher,
+    TokenService,
+    SessionService,
+    OtpService,
+    PinService,
+    AuthService,
+    StepUpService,
+    {
+      provide: NotifyClient,
+      useFactory: (config: IdentityConfig) =>
+        new NotifyClient({
+          notificationUrl: config.notificationUrl,
+          internalSecret: config.internalSecret,
+          serviceName: 'identity',
+        }),
+      inject: [CONFIG],
+    },
     {
       provide: APP_GUARD,
       useFactory: (reflector: Reflector) =>

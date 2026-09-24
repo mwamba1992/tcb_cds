@@ -51,6 +51,7 @@ jobs:
       INTERNAL_SERVICE_SECRET: ci-internal-secret
       JWT_ACCESS_SECRET: ci-access-secret
       JWT_STEP_UP_SECRET: ci-step-up-secret
+      JWT_REFRESH_SECRET: ci-refresh-secret
       NODE_ENV: test
       # Every service that owns a schema — read by both the generate and migrate steps.
       SERVICES: identity investor auction bot-gateway cbs-gateway settlement notification
