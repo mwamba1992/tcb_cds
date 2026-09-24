@@ -21,6 +21,10 @@ function onPin(event: Event) {
 
 async function signIn() {
   locked.value = false;
+  if (phone.value.trim().length < 9 || pin.value.length !== 4) {
+    error.value = 'Enter your mobile number and your 4-digit PIN.';
+    return;
+  }
   const ok = await run(async () => {
     try {
       await account.signIn(phone.value, pin.value);
@@ -70,7 +74,7 @@ async function signIn() {
         {{ error }}
         <RouterLink v-if="locked" :to="{ name: 'account-reset-pin' }">Reset PIN</RouterLink>
       </p>
-      <button class="btn btn-primary" type="submit" :disabled="pending || !phone || pin.length !== 4">
+      <button class="btn btn-primary submit" type="submit" :disabled="pending">
         {{ pending ? 'Signing in…' : 'Sign in' }}
       </button>
     </form>
@@ -86,5 +90,9 @@ async function signIn() {
   display: flex;
   flex-direction: column;
   gap: 20px;
+}
+.submit {
+  padding: 12px 16px;
+  font-size: 15px;
 }
 </style>

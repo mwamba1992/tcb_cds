@@ -20,6 +20,10 @@ const resendAfter = ref<string | null>(null);
 const newPin = ref<string | null>(null);
 
 async function sendCode() {
+  if (phone.value.trim().length < 9) {
+    error.value = 'Enter your registered mobile number.';
+    return;
+  }
   const sent = await run(() => accountApi.startPinReset(phone.value));
   if (sent) {
     resendAfter.value = sent.resendAfter;
@@ -28,7 +32,10 @@ async function sendCode() {
 }
 
 async function reset() {
-  if (!newPin.value) return;
+  if (code.value.length !== 6 || !newPin.value) {
+    error.value = 'Enter the 6-digit code and the same new PIN in both boxes.';
+    return;
+  }
   const pin = newPin.value;
   const done = await run(async () => {
     await account.completePinReset(phone.value, code.value, pin);
@@ -65,7 +72,7 @@ function onCode(event: Event) {
         />
       </label>
       <p v-if="error" class="notice notice--error" role="alert">{{ error }}</p>
-      <button class="btn btn-primary" type="submit" :disabled="pending || phone.trim().length < 9">
+      <button class="btn btn-primary" type="submit" :disabled="pending">
         {{ pending ? 'Sending…' : 'Send code' }}
       </button>
     </form>
@@ -86,7 +93,7 @@ function onCode(event: Event) {
       <CodeResend :resend-after="resendAfter" :pending="pending" @resend="sendCode" />
       <PinFields @change="newPin = $event" />
       <p v-if="error" class="notice notice--error" role="alert">{{ error }}</p>
-      <button class="btn btn-primary" type="submit" :disabled="pending || code.length !== 6 || !newPin">
+      <button class="btn btn-primary" type="submit" :disabled="pending">
         {{ pending ? 'Saving…' : 'Reset PIN' }}
       </button>
     </form>

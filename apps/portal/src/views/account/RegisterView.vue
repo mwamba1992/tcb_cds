@@ -41,6 +41,10 @@ const subtitle = computed(() =>
 );
 
 async function sendCode() {
+  if (phone.value.trim().length < 9) {
+    error.value = 'Enter your mobile number, for example 0712 345 678.';
+    return;
+  }
   const sent = await run(() => accountApi.startRegistration(phone.value));
   if (sent) {
     resendAfter.value = sent.resendAfter;
@@ -50,12 +54,19 @@ async function sendCode() {
 }
 
 async function verify() {
+  if (code.value.length !== 6) {
+    error.value = 'Enter the 6-digit code from the SMS.';
+    return;
+  }
   const done = await run(() => account.completeRegistration(phone.value, code.value));
   if (done) step.value = 3;
 }
 
 async function savePin() {
-  if (!newPin.value) return;
+  if (!newPin.value) {
+    error.value = 'Enter the same 4-digit PIN in both boxes.';
+    return;
+  }
   const pin = newPin.value;
   const done = await run(async () => {
     await account.setPin(pin);
@@ -99,7 +110,7 @@ function onCode(event: Event) {
         <span class="field-hint">Vodacom, Airtel, Tigo, Halotel or TTCL. This is also where results are sent.</span>
       </label>
       <p v-if="error" class="notice notice--error" role="alert">{{ error }}</p>
-      <button class="btn btn-primary" type="submit" :disabled="pending || phone.trim().length < 9">
+      <button class="btn btn-primary" type="submit" :disabled="pending">
         {{ pending ? 'Sending…' : 'Send code' }}
       </button>
     </form>
@@ -123,7 +134,7 @@ function onCode(event: Event) {
         <button type="button" class="btn btn-secondary" :disabled="pending" @click="step = 1">
           Change number
         </button>
-        <button class="btn btn-primary" type="submit" :disabled="pending || code.length !== 6">
+        <button class="btn btn-primary" type="submit" :disabled="pending">
           {{ pending ? 'Checking…' : 'Verify' }}
         </button>
       </div>
@@ -132,7 +143,7 @@ function onCode(event: Event) {
     <form v-else class="form" @submit.prevent="savePin">
       <PinFields @change="newPin = $event" />
       <p v-if="error" class="notice notice--error" role="alert">{{ error }}</p>
-      <button class="btn btn-primary" type="submit" :disabled="pending || !newPin">
+      <button class="btn btn-primary" type="submit" :disabled="pending">
         {{ pending ? 'Saving…' : 'Set PIN and continue' }}
       </button>
     </form>

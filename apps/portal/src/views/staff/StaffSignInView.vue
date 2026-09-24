@@ -3,7 +3,6 @@ import { ref } from 'vue';
 import { useRoute, useRouter } from 'vue-router';
 import AuthLayout from '../../components/AuthLayout.vue';
 import { useAsync } from '../../composables/useAsync';
-import { DEMO } from '../../config/portal';
 import { useAccountStore } from '../../stores/account';
 
 /**
@@ -18,7 +17,24 @@ const { pending, error, run } = useAsync();
 const username = ref('');
 const password = ref('');
 
+const DEV_ACCOUNTS = [
+  { username: 'rose.mollel', role: 'Maker' },
+  { username: 'salum.kweka', role: 'Checker' },
+  { username: 'neema.lyimo', role: 'Compliance' },
+  { username: 'faraji.mrema', role: 'Treasury' },
+];
+
+function fill(user: string) {
+  username.value = user;
+  password.value = 'Govsec-dev-2026';
+  error.value = null;
+}
+
 async function signIn() {
+  if (!username.value.trim() || !password.value) {
+    error.value = 'Enter your username and password.';
+    return;
+  }
   const ok = await run(async () => {
     await account.staffSignIn(username.value, password.value);
     return true;
@@ -47,15 +63,19 @@ async function signIn() {
         <input v-model="password" class="input input--text" type="password" autocomplete="current-password" required />
       </label>
       <p v-if="error" class="notice notice--error" role="alert">{{ error }}</p>
-      <button class="btn btn-primary" type="submit" :disabled="pending || !username || !password">
+      <button class="btn btn-primary submit" type="submit" :disabled="pending">
         {{ pending ? 'Signing in…' : 'Sign in' }}
       </button>
-      <p v-if="DEMO" class="notice">
-        Development accounts: <span class="mono">rose.mollel</span> (maker),
-        <span class="mono">salum.kweka</span> (checker), <span class="mono">neema.lyimo</span> (compliance),
-        <span class="mono">faraji.mrema</span> (treasury). Created by <span class="mono">scripts/dev-seed-staff.mjs</span>.
-      </p>
     </form>
+    <template #dev>
+      <div class="dev">
+        <span class="dev-tag">Development</span>
+        <span class="dev-label">Sign in as</span>
+        <button v-for="a in DEV_ACCOUNTS" :key="a.username" type="button" class="dev-chip" @click="fill(a.username)">
+          {{ a.role }}
+        </button>
+      </div>
+    </template>
   </AuthLayout>
 </template>
 
@@ -64,5 +84,39 @@ async function signIn() {
   display: flex;
   flex-direction: column;
   gap: 20px;
+}
+.submit {
+  padding: 12px 16px;
+  font-size: 15px;
+}
+.dev {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+  font-size: 12px;
+  color: var(--muted);
+}
+.dev-tag {
+  background: var(--amber-bg);
+  color: var(--amber-fg);
+  font-weight: 600;
+  border-radius: var(--radius-chip);
+  padding: 2px 8px;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  font-size: 11px;
+}
+.dev-chip {
+  border: 1px solid var(--border);
+  background: var(--surface);
+  border-radius: 12px;
+  padding: 3px 10px;
+  font-size: 12px;
+  color: var(--ink);
+  cursor: pointer;
+}
+.dev-chip:hover {
+  border-color: var(--navy);
 }
 </style>

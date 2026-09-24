@@ -1,48 +1,92 @@
 <script setup lang="ts">
+import { DEMO } from '../config/portal';
 import BrandBars from './BrandBars.vue';
 
-/** Sign-in, registration and PIN reset: the brand panel beside one focused card. */
-defineProps<{ title: string; subtitle?: string; audience?: 'investor' | 'staff' }>();
+/**
+ * Sign-in, registration and PIN reset.
+ *
+ * A brand panel beside a plain white form column. The panel's graphic is TCB's own
+ * mark (the square frame in yellow, green and blue) drawn large, so the page is
+ * recognisably TCB without a photograph that would need licensing.
+ */
+const props = withDefaults(
+  defineProps<{ title: string; subtitle?: string; audience?: 'investor' | 'staff' }>(),
+  { subtitle: undefined, audience: 'investor' },
+);
+
+const copy =
+  props.audience === 'staff'
+    ? {
+        headline: 'Back-office',
+        sub: 'KYC review, CDS accounts, bid submission to the Bank of Tanzania and settlement.',
+        points: [
+          'Maker-checker on every approval',
+          'Every action recorded against your name',
+          'For TCB staff on the bank network only',
+        ],
+        help: 'Access problems: TCB ICT service desk',
+      }
+    : {
+        headline: 'Treasury bills and bonds, bought through TCB.',
+        sub: 'Bid in Bank of Tanzania auctions from your phone or computer.',
+        points: [
+          'Held in your own CDS account at the Bank of Tanzania',
+          'Funds stay on your TCB account until the result',
+          'Results and payments by SMS',
+        ],
+        help: null,
+      };
+const year = new Date().getFullYear();
 </script>
 
 <template>
   <div class="auth">
     <aside class="panel">
-      <div class="logo-plate">
-        <div class="logo-crop">
-          <img src="/tcb-logo.png" alt="Tanzania Commercial Bank" />
-        </div>
-      </div>
+      <svg class="mark" viewBox="0 0 200 200" aria-hidden="true">
+        <polygon class="y" points="0,0 64,0 100,36 36,36 36,150 0,186" />
+        <polygon class="g" points="92,0 200,0 200,84 164,48 164,36 128,36" />
+        <polygon class="b" points="164,76 200,112 200,200 12,200 48,164 164,164" />
+      </svg>
+
       <div class="pitch">
         <div class="kicker"><BrandBars />Government Securities</div>
-        <template v-if="audience === 'staff'">
-          <p class="headline">Back-office</p>
-          <p class="sub">
-            KYC review, CDS accounts, bid submission to the Bank of Tanzania and settlement.
-            For TCB staff only; every action is recorded against your name.
-          </p>
-        </template>
-        <template v-else>
-          <p class="headline">Treasury bills and bonds, bought through TCB.</p>
-          <p class="sub">
-            Bid in Bank of Tanzania auctions from your phone or computer. Funds are held on your
-            TCB account until the auction result is known.
-          </p>
-        </template>
+        <h2 class="headline">{{ copy.headline }}</h2>
+        <p class="sub">{{ copy.sub }}</p>
+        <ul class="points">
+          <li v-for="point in copy.points" :key="point">
+            <svg viewBox="0 0 20 20" aria-hidden="true"><path d="M5 10.5l3 3 7-7" /></svg>
+            {{ point }}
+          </li>
+        </ul>
       </div>
-      <p v-if="audience === 'staff'" class="help">Access problems: TCB ICT service desk</p>
-      <p v-else class="help">Help: <a href="tel:0800780100">0800 780 100</a> (free)</p>
+      <p class="legal">© {{ year }} Tanzania Commercial Bank PLC. Regulated by the Bank of Tanzania.</p>
     </aside>
 
     <main class="side">
-      <section class="card auth-card">
-        <header class="auth-head">
-          <h1 class="auth-title">{{ title }}</h1>
-          <p v-if="subtitle" class="auth-sub">{{ subtitle }}</p>
+      <div class="column">
+        <div class="logo" role="img" aria-label="Tanzania Commercial Bank">
+          <img src="/tcb-logo.png" alt="" />
+        </div>
+
+        <header class="head">
+          <h1 class="title">{{ title }}</h1>
+          <p v-if="subtitle" class="subtitle">{{ subtitle }}</p>
         </header>
+
         <slot />
-      </section>
-      <nav v-if="$slots.footer" class="auth-footer"><slot name="footer" /></nav>
+
+        <footer class="foot">
+          <nav v-if="$slots.footer" class="links"><slot name="footer" /></nav>
+          <p class="help">
+            <template v-if="copy.help">{{ copy.help }}</template>
+            <template v-else>Help: <a href="tel:0800780100">0800 780 100</a>, free from any network</template>
+          </p>
+        </footer>
+
+        <div v-if="DEMO && $slots.dev" class="dev">
+          <slot name="dev" />
+        </div>
+      </div>
     </main>
   </div>
 </template>
@@ -50,40 +94,45 @@ defineProps<{ title: string; subtitle?: string; audience?: 'investor' | 'staff' 
 <style scoped>
 .auth {
   display: grid;
-  grid-template-columns: minmax(320px, 440px) minmax(0, 1fr);
+  grid-template-columns: minmax(360px, 5fr) 7fr;
   min-height: 100vh;
+  background: var(--surface);
 }
+
+/* ---------- brand panel ---------- */
+
 .panel {
+  position: relative;
+  overflow: hidden;
   background: var(--navy);
   color: var(--on-navy);
-  padding: 32px;
+  padding: 48px 56px 32px;
   display: flex;
   flex-direction: column;
+  justify-content: space-between;
   gap: 40px;
 }
-.logo-plate {
-  width: 204px;
-  height: 87px;
-  overflow: hidden;
+/* The mark, large and running off the right edge: recognisably TCB's frame, used as a
+   graphic rather than as a second logo. In the flow, not absolutely placed, so the
+   text below can never run into it however narrow the panel gets. */
+.mark {
+  align-self: flex-end;
+  flex: none;
+  width: min(70%, 340px);
+  margin: 8px -104px 0 0;
+}
+.mark .y {
+  fill: var(--brand-yellow);
+}
+.mark .g {
+  fill: var(--brand-green);
+}
+.mark .b {
+  fill: var(--brand-blue);
+}
+.pitch {
   position: relative;
-  background: #fff;
-  border-radius: 8px;
-}
-.logo-crop {
-  position: absolute;
-  left: 12px;
-  top: 10px;
-  width: 180px;
-  height: 67px;
-  overflow: hidden;
-}
-.logo-crop img {
-  position: absolute;
-  width: 200px;
-  height: 200px;
-  left: -10px;
-  top: -67px;
-  max-width: none;
+  max-width: 440px;
 }
 .kicker {
   display: flex;
@@ -96,93 +145,176 @@ defineProps<{ title: string; subtitle?: string; audience?: 'investor' | 'staff' 
   color: var(--on-navy-faint);
 }
 .headline {
-  font-size: 26px;
+  font-size: 34px;
   font-weight: 600;
-  line-height: 1.25;
-  margin: 14px 0 12px;
+  line-height: 1.18;
+  margin: 16px 0 12px;
   text-wrap: balance;
 }
 .sub {
   color: var(--on-navy-muted);
-  font-size: 15px;
+  font-size: 16px;
   line-height: 1.5;
-  margin: 0;
+  margin: 0 0 28px;
   text-wrap: pretty;
 }
-.help {
-  margin: auto 0 0;
-  font-size: 13px;
+.points {
+  list-style: none;
+  margin: 0;
+  padding: 24px 0 0;
+  border-top: 1px solid var(--navy-raised);
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  font-size: 14px;
+  color: var(--on-navy);
+}
+.points li {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+.points svg {
+  width: 20px;
+  height: 20px;
+  flex: none;
+  fill: none;
+  stroke: var(--brand-green);
+  stroke-width: 2.2;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+.legal {
+  position: relative;
+  margin: 0;
+  font-size: 12px;
   color: var(--on-navy-faint);
 }
-.help a {
-  color: var(--brand-yellow);
-}
+
+/* ---------- form column ---------- */
 
 .side {
   display: flex;
-  flex-direction: column;
-  align-items: center;
   justify-content: center;
-  padding: 48px 24px;
-  gap: 20px;
+  align-items: center;
+  padding: 48px 32px;
 }
-.auth-card {
+.column {
   width: 100%;
-  max-width: 460px;
-  padding: 28px;
+  max-width: 400px;
+  display: flex;
+  flex-direction: column;
 }
-.auth-head {
-  margin-bottom: 22px;
+/* The logo file is square with generous margins; crop to the lock-up. */
+.logo {
+  width: 180px;
+  height: 67px;
+  overflow: hidden;
+  position: relative;
+  margin: 0 0 40px -2px;
 }
-.auth-title {
+.logo img {
+  position: absolute;
+  width: 200px;
+  height: 200px;
+  left: -10px;
+  top: -67px;
+  max-width: none;
+}
+.head {
+  margin-bottom: 28px;
+}
+.title {
   margin: 0;
-  font-size: 22px;
+  font-size: 26px;
   font-weight: 600;
+  letter-spacing: -0.01em;
 }
-.auth-sub {
-  margin: 6px 0 0;
+.subtitle {
+  margin: 8px 0 0;
   color: var(--muted);
-  font-size: 14px;
-  line-height: 1.45;
+  font-size: 15px;
+  line-height: 1.5;
   text-wrap: pretty;
 }
-.auth-footer {
-  font-size: 14px;
-  color: var(--muted);
+.foot {
+  margin-top: 32px;
+  padding-top: 20px;
+  border-top: 1px solid var(--divider);
   display: flex;
-  gap: 16px;
+  flex-direction: column;
+  gap: 10px;
+  font-size: 14px;
+}
+.links {
+  display: flex;
+  gap: 20px;
   flex-wrap: wrap;
-  justify-content: center;
+}
+.links :deep(a) {
+  color: var(--navy);
+  font-weight: 600;
+}
+.help {
+  margin: 0;
+  color: var(--muted);
+  font-size: 13px;
+}
+.help a {
+  color: var(--navy);
+}
+.dev {
+  margin-top: 28px;
 }
 
-@media (max-width: 860px) {
+/* Short screens (a 768px-tall laptop): the mark gives way before the text does. */
+@media (max-height: 820px) and (min-width: 961px) {
+  .panel {
+    padding-top: 32px;
+    gap: 24px;
+  }
+  .mark {
+    width: min(50%, 200px);
+    margin-right: -64px;
+  }
+  .headline {
+    font-size: 28px;
+  }
+}
+
+/* ---------- narrow screens ---------- */
+
+@media (max-width: 960px) {
   .auth {
     grid-template-columns: minmax(0, 1fr);
-    /* The band keeps its own height; the form takes the rest. */
     grid-template-rows: auto 1fr;
   }
   .panel {
-    padding: 16px;
-    gap: 12px;
-    flex-direction: row;
-    align-items: center;
+    min-height: 0;
+    padding: 20px 20px 18px;
+    gap: 0;
   }
-  .logo-plate {
-    transform: scale(0.7);
-    transform-origin: left center;
-    margin: -13px -61px -13px 0;
+  /* A slice of the frame reads as a stray bar at this size; the kicker's brand bars
+     carry the colours instead. */
+  .mark {
+    display: none;
   }
-  .pitch .headline,
-  .pitch .sub,
-  .help {
+  .headline {
+    font-size: 20px;
+    margin: 8px 0 0;
+    max-width: 70%;
+  }
+  .sub,
+  .points,
+  .legal {
     display: none;
   }
   .side {
-    justify-content: flex-start;
-    padding: 24px 16px;
+    align-items: flex-start;
+    padding: 28px 20px 40px;
   }
-  .auth-card {
-    padding: 20px;
+  .logo {
+    display: none;
   }
 }
 </style>
